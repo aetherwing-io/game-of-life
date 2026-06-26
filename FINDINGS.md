@@ -377,6 +377,58 @@ fine-tuned `B3/S23` balance. The penalty pushes the dynamics to the edge between
 vacuum and fill, but for these models that edge is a **lattice-size-pinned
 knife-edge**, not a stable basin a lifeform can occupy.
 
+## 15. Seeding meaning: the iterated map is indifferent to it
+
+The geometry experiments (§12–14) seed live *cells*; here we seed meaningful
+*word-strings* into the **causal full-attention** rule (where each site sees its
+whole left context, so semantics actually operate) and watch the transient
+before the genre attractor wins. Qwen2.5-0.5B, soft (not absorbing), T=0.3,
+L=64. Three findings, one law.
+
+**1. Contradictions are "anti-still-lifes."** Internally-conflicting seeds —
+`yes no`, `true false`, the liar paradox, `war is peace`, `I must obey / I
+cannot obey`, `left right` — are erased *fastest* (gone by g1–2), *faster* than
+coherent text (g4–5). No pole ever wins or oscillates; the conflict simply
+evaporates. Robust across base/instruct and T=0/0.3 — only the destination
+basin changes (base → Chinese exam text, dead token `Human`; instruct → a
+`/API` + field-of-`0` code basin). At T=0, base lands on a *fully grammatical*
+sentence; instruct collapses to nearly pure `0` (the emptier basin).
+
+**2. It is frequency, not meaning.** Evocative, image-dense phrases (`velvet
+shadows…`, `glittering crimson splendor…`) die *as fast as contradictions*
+(g2–3) and faster than dull common text — because ornate words are
+*low-probability*, so the rule overwrites them on contact. Per-token survival on
+`" the speed of light is the only constant in the universe"` is the cleanest
+demonstration: only `the` survives (to g43); every content word (`light`,
+`constant`, `universe`) is gone by g0–1. *The system's actual "only constant" is
+the word "the."* Genre-match doesn't help either — an engineering claim matching
+the exam basin dies just as fast. Quantified across 79 seed tokens
+(`results/seed_survival_vs_logprob.png`, `seed_survival_data.csv`): survival vs
+the model's unconditional log-prob (its frequency prior) is **a threshold, not a
+gradient** — **86% of tokens die by gen 1 regardless of frequency**, and only
+the 3–4 highest-frequency function words (`the`, `a`, `is`) escape the floor
+(Spearman ρ≈0.29, weak precisely because the relationship is winner-take-all).
+The rule preserves the bland-and-frequent and erases the contradictory, the
+beautiful, and the profound alike.
+
+**3. A memory substrate delays but does not defeat — and reveals a negativity
+bias.** The synchronous update overwrites every site at once, so a chain of
+reasoning has no substrate to form in. The asynchronous variant (`update_frac` <
+1.0; §code) resamples only a fraction of sites per generation, freezing the rest
+as committed memory. At `update_frac=0.1` a conflict that vanishes by g1–3
+synchronously survives to **g34–38** — and the *negation* token consistently
+outlives its partner (`no` outlives `yes`, `cannot` outlives `must`; the last
+conflict-token standing is always the negative one). But no stable
+conflict-resolution structure forms: memory stretches the transient and exposes
+the bias, then the dissipative genre attractor still wins the fixed point.
+
+**Conclusion.** As a dynamical system the iterated map is a **frequency filter,
+not a reasoner**. It strips any seed — contradictory, ornate, profound, or
+on-topic — to its most frequent grammatical tokens within a generation, then
+overwrites with the model's training-genre reflex. Meaning is not a conserved
+quantity; the only thing it reliably keeps is `the`, and the only thing it
+"prefers," given memory, is *no*.
+
 ## 11. Next steps
 
 1. **Local-neighborhood rule (the headline follow-up).** Restrict each site to
