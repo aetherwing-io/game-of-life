@@ -52,12 +52,26 @@ class BaseAutomaton:
         self.model = model
         self.dead_token = dead_token
         self.device = device
+        # Homeostatic "overpopulation death" knob (Conway's balance axis): each
+        # site's logit for a token is reduced in proportion to how many times
+        # that token already occupies the current generation. 0 = off (default,
+        # preserving prior behavior). This is the negative-feedback control that
+        # temperature -- a pure disorder knob -- cannot provide.
+        self.freq_penalty = 0.0
 
     def logits(self, state: torch.Tensor) -> torch.Tensor:  # pragma: no cover
         raise NotImplementedError
 
     def _vacuum_mask(self, state: torch.Tensor) -> torch.Tensor:  # pragma: no cover
         raise NotImplementedError
+
+    def _apply_freq_penalty(self, lg: torch.Tensor, state: torch.Tensor) -> torch.Tensor:
+        """Subtract freq_penalty * (count of each token in the current grid) from
+        every site's logits, so over-represented tokens are suppressed."""
+        if not self.freq_penalty:
+            return lg
+        counts = torch.bincount(state, minlength=lg.shape[-1]).to(lg.dtype)
+        return lg - self.freq_penalty * counts.unsqueeze(0)
 
     def step(
         self,
@@ -68,7 +82,7 @@ class BaseAutomaton:
         generator: torch.Generator | None = None,
     ) -> tuple[torch.Tensor, StepNoise]:
         """Advance one generation. Returns (next_state, noise_used)."""
-        lg = self.logits(state)
+        lg = self._apply_freq_penalty(self.logits(state), state)
         gumbel = noise.gumbel if noise is not None else gumbel_like(lg, generator=generator)
         nxt = sample(lg, temperature, noise=gumbel)
         if absorbing:

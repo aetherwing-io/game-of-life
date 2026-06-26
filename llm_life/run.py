@@ -89,6 +89,8 @@ def _to_np(states) -> np.ndarray:
 # --------------------------------------------------------------------------- #
 def cmd_single(args):
     auto, tok, model, info = _build(args)
+    auto.freq_penalty = getattr(args, "freq_penalty", 0.0)
+    info["freq_penalty"] = auto.freq_penalty
     print(f"[info] {info}")
     init = _random_init(auto, args.length, info["vocab"], info["device"], args.seed)
     g = _gen(info["device"], args.seed + 1)
@@ -106,7 +108,9 @@ def cmd_single(args):
           f"tau_int={tau:.2f}  xi={xi:.2f}  final live={live[-1]:.4f}")
 
     os.makedirs(args.out, exist_ok=True)
-    tag = f"{info['arch']}_T{args.temp}_L{args.length}_s{args.seed}{'_abs' if args.absorbing else ''}"
+    pen_tag = f"_p{args.freq_penalty}" if getattr(args, "freq_penalty", 0.0) else ""
+    tag = (f"{info['arch']}_T{args.temp}{pen_tag}_L{args.length}_s{args.seed}"
+           f"{'_abs' if args.absorbing else ''}")
 
     # per-generation CSV
     csv_path = os.path.join(args.out, f"single_{tag}.csv")
@@ -251,6 +255,78 @@ def _plot_sweep(temps, agg, args, info):
 
 
 # --------------------------------------------------------------------------- #
+# sweep2d  (temperature x frequency-penalty phase plane)
+# --------------------------------------------------------------------------- #
+def cmd_sweep2d(args):
+    auto, tok, model, info = _build(args)
+    print(f"[info] {info}")
+    temps = _parse_temps(args.temps)
+    pens = _parse_temps(args.penalties)
+    print(f"[sweep2d] {len(temps)} temps x {len(pens)} penalties x {args.seeds} seeds")
+
+    burn = min(args.burn, args.steps // 2)
+    # grids[key][i_pen, j_temp] = seed-averaged steady-state metric
+    keys = ["activity", "entropy", "live", "tau_int", "xi"]
+    grids = {k: np.zeros((len(pens), len(temps))) for k in keys}
+    rows = []
+    for ip, pen in enumerate(pens):
+        for jt, T in enumerate(temps):
+            vals = {k: [] for k in keys}
+            for s in range(args.seeds):
+                auto.freq_penalty = float(pen)
+                init = _random_init(auto, args.length, info["vocab"], info["device"], 1000 * s + 7)
+                g = _gen(info["device"], 1000 * s + 99)
+                states = _to_np(auto.trajectory(init, args.steps, T, args.absorbing, generator=g)[0])
+                vals["activity"].append(float(metrics.activity(states)[burn:].mean()))
+                vals["entropy"].append(float(metrics.token_entropy(states)[burn:].mean()))
+                vals["live"].append(float(metrics.live_density(states, info["dead_token"])[burn:].mean()))
+                vals["tau_int"].append(float(metrics.integrated_autocorr_time(metrics.activity(states)[burn:])))
+                vals["xi"].append(float(metrics.spatial_corr_length(states[burn:])))
+            for k in keys:
+                grids[k][ip, jt] = np.mean(vals[k])
+            rows.append({"penalty": pen, "temp": T, **{k: grids[k][ip, jt] for k in keys}})
+            print(f"  pen={pen:<5} T={T:<5} rho={grids['activity'][ip,jt]:.3f} "
+                  f"H={grids['entropy'][ip,jt]:.2f} tau={grids['tau_int'][ip,jt]:.1f} "
+                  f"xi={grids['xi'][ip,jt]:.1f}")
+
+    os.makedirs(args.out, exist_ok=True)
+    raw = os.path.join(args.out, f"sweep2d_raw_{info['arch']}.csv")
+    with open(raw, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        w.writeheader()
+        w.writerows(rows)
+    print(f"[wrote] {raw}")
+    _plot_sweep2d(grids, temps, pens, args, info)
+
+
+def _plot_sweep2d(grids, temps, pens, args, info):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    panels = [("activity", "activity rho"), ("entropy", "entropy (bits)"),
+              ("tau_int", "autocorr time tau_int"), ("xi", "spatial corr len xi")]
+    fig, axes = plt.subplots(2, 2, figsize=(11, 8))
+    extent = [min(temps), max(temps), min(pens), max(pens)]
+    for ax, (key, label) in zip(axes.ravel(), panels):
+        im = ax.imshow(grids[key], origin="lower", aspect="auto", extent=extent,
+                       cmap="viridis", interpolation="nearest")
+        ax.set_xlabel("temperature T")
+        ax.set_ylabel("frequency penalty")
+        ax.set_title(label)
+        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    mode = "absorbing" if args.absorbing else "soft"
+    fig.suptitle(f"LLM-CA phase plane — {info['model']} ({info['arch']}), L={args.length}, "
+                 f"{args.seeds} seeds, {mode}\n"
+                 f"disorder axis (T) x balance axis (penalty); look for a tau_int/xi ridge")
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    png = os.path.join(args.out, f"sweep2d_{info['arch']}_{mode}.png")
+    fig.savefig(png, dpi=140)
+    plt.close(fig)
+    print(f"[wrote] {png}")
+
+
+# --------------------------------------------------------------------------- #
 # damage  (coupled-noise Lyapunov / butterfly)
 # --------------------------------------------------------------------------- #
 def cmd_damage(args):
@@ -349,8 +425,20 @@ def main():
     sp.add_argument("--steps", type=int, default=300)
     sp.add_argument("--seed", type=int, default=0)
     sp.add_argument("--absorbing", action="store_true")
+    sp.add_argument("--freq-penalty", type=float, default=0.0, dest="freq_penalty",
+                    help="overpopulation-death balance knob (0 = off)")
     sp.add_argument("--animate", action="store_true", help="also write an animated GIF")
     sp.set_defaults(func=cmd_single)
+
+    s2 = sub.add_parser("sweep2d", help="temperature x frequency-penalty phase plane")
+    s2.add_argument("--temps", default="0.2:1.6:0.2", help="lo:hi:step or comma list")
+    s2.add_argument("--penalties", default="0.0:5.0:0.5", help="lo:hi:step or comma list")
+    s2.add_argument("--length", type=int, default=128)
+    s2.add_argument("--steps", type=int, default=200)
+    s2.add_argument("--burn", type=int, default=100, help="burn-in gens discarded")
+    s2.add_argument("--seeds", type=int, default=2)
+    s2.add_argument("--absorbing", action="store_true")
+    s2.set_defaults(func=cmd_sweep2d)
 
     rf = sub.add_parser("reference", help="known-class CA baselines (same pipeline)")
     rf.add_argument("--rules", type=int, nargs="+", default=[110, 30, 90, 250])
