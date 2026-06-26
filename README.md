@@ -17,9 +17,14 @@ The LM is treated as a high-dimensional categorical map `F : V^L → V^L`, not a
 writer. We strip away semantics and measure the *dynamics*.
 
 > **Results: see [`FINDINGS.md`](FINDINGS.md).** Short version — GPT-2 iterated
-> this way has *no* edge-of-chaos regime: it either collapses to a dead state or
-> sits in noise-driven disorder that *synchronizes* under common noise (not
-> deterministic chaos). Order appears only at `T=0`.
+> this way has *no* edge-of-chaos regime under any knob tried: temperature
+> (disorder), a global frequency penalty (balance), or a masked/bidirectional
+> rule (symmetry). It collapses to a dead state or sits in disorder; the causal
+> variant's "chaos" even *synchronizes* under common noise. The missing
+> ingredient is **locality** — full attention mixes the whole lattice every
+> step, so nothing localized can persist. The masked variant came closest
+> (drifting clusters near its transition). Local-neighborhood rules are the
+> next experiment.
 
 ## The map
 

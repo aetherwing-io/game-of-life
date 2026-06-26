@@ -11,7 +11,13 @@ and `results/damage_*_L128*.csv`; figures in `results/`.
 ## TL;DR
 
 **GPT-2 iterated as a cellular automaton has no Class-4 / edge-of-chaos regime
-under temperature control.** It does one of two things:
+— not under temperature, not under a global balance knob, not with a
+bidirectional rule.** The missing ingredient is *locality*: a full-attention LM
+mixes information globally every step, so no localized structure can persist.
+The single most structured texture observed was the masked/bidirectional
+variant near its transition (localized drifting clusters; sections 8–10).
+
+Under temperature control it does one of two things:
 
 - **Absorbing rule** → collapses into the dead state (the all-`\n` ground
   state) below a sharp critical temperature `T_c ≈ 1.3`; only a feeble active
@@ -134,15 +140,90 @@ live at simply isn't there for this model under temperature control.
 - **Discrete argmax/sampling feedback** only; the continuous activation field is
   never fed back (by design — we iterate the observable token lattice).
 
-## 7. Next steps
+## 8. Masked-LM (bidirectional) variant
 
-1. **Masked-LM map** — true local symmetric neighborhood; the most faithful
-   Conway analogue and the experiment most likely to (dis)prove an edge regime.
-2. **Finite-size scaling** of the absorbing transition (vary `L`) to test
+`results/sweep_phasediagram_masked_soft.png`, `spacetime_masked_T*.png`,
+`damage_masked_*.png`. distilroberta-base, `L=48`, symmetric neighborhood (each
+site recomputed from the rest via one batched masked forward pass). Dead token:
+`Advertisements` (the model's bare-`[MASK]` argmax).
+
+Two qualitative differences from causal:
+
+- **Low T: collapses harder.** Even in *soft* mode (no absorbing rule) it drains
+  to the dead state for `T < 1.2`, where causal-soft stayed active at `ρ ≈ 0.65`.
+  Bidirectional context is a stronger consensus: every site sees the whole
+  (increasingly uniform) sequence and agrees on the ground state. The dead→chaos
+  transition is sharper and higher (`T_c ≈ 1.2`) than causal's.
+- **High T: genuinely chaotic.** Damage spreading does **not** synchronize —
+  at `T = 1.0` a one-token perturbation fills the entire lattice (48/48) and
+  stays, vs causal's uniform healing to 0. Positive asymptotic conditional
+  Lyapunov exponent: real sensitive dependence, not noise-driven pseudo-chaos.
+
+And the most structured texture in the whole study: the `T = 1.2` space-time
+diagram shows **localized, persistent activity clusters drifting on the
+quiescent dead background** — Class-4-*adjacent*, consistent with the masked
+variant's elevated spatial correlation length (`ξ` up to 3 vs causal's 1). Still
+no clean glider regime, but the closest any variant came.
+
+## 9. Temperature × frequency-penalty phase plane
+
+`results/sweep2d_causal_soft.png`, `sweep2d_raw_causal.csv`. GPT-2, `L=96`,
+8 temperatures × 8 penalties × 2 seeds. The frequency penalty is the
+homeostatic "overpopulation death" knob — a token's logit drops with its count
+in the current generation — added to test whether a *balance* axis opens an edge
+band the pure *disorder* axis (temperature) could not.
+
+**It does not.** Across the entire plane:
+
+- Activity saturates to `ρ ≈ 1.0` as soon as penalty ≥ 0.5 — the penalty kills
+  the quiescent phase but only by forcing maximal turnover.
+- `τ_int` is **highest at penalty = 0** and decays monotonically to ~0 as
+  penalty rises — the penalty *destroys* temporal correlation. No interior ridge.
+- `ξ` sits at its floor everywhere and collapses to 0 at high penalty.
+
+So the penalty acts as a *second disorder knob*, not a balance knob. The
+oscillatory-phase hypothesis (strong anti-repetition → periodic dynamics, which
+would have shown as rising `τ_int`) is not borne out.
+
+The reason is instructive: this penalty is **global** (whole-grid token counts),
+whereas Conway's birth/death balance is **local**. A global balance has no
+spatial degrees of freedom to organize — it can only force global turnover.
+
+## 10. Unified conclusion: locality is the missing ingredient
+
+Three independent control axes have now failed to produce an edge of chaos:
+
+| axis | knob | result |
+|---|---|---|
+| disorder | temperature | frozen-only-at-0 → noise; no peak |
+| balance | global frequency penalty | floods to max activity; `τ_int`, `ξ` → 0 |
+| symmetry | masked / bidirectional | collapses lower, true chaos higher; mild structure |
+
+The common thread: **full attention mixes the whole lattice every generation**,
+so there is no finite signal speed and no way for a localized structure to
+persist or propagate. `ξ` is pinned at its floor in every full-attention setting
+because a perturbation reaches all sites in one step. The masked variant showed
+*slightly* more spatial coherence precisely because the consensus dynamics
+created transient localized agreement — but it is still globally coupled.
+
+The prediction this licenses: an **edge of chaos, if reachable at all, requires
+a local neighborhood** — a sliding-window-attention model, an explicit attention
+mask restricting each site to ±w neighbors, or a state-space/recurrent model
+with finite propagation speed. That is the experiment most likely to finally
+produce gliders, and it is the top remaining item below.
+
+## 11. Next steps
+
+1. **Local-neighborhood rule (the headline follow-up).** Restrict each site to
+   a window of ±w neighbors — via an explicit attention mask on a full-attention
+   model, a sliding-window-attention model (e.g. Mistral SWA), or a
+   state-space/recurrent model (Mamba). Finite signal speed is the precondition
+   for gliders; this is the experiment most likely to finally produce one.
+2. **Local frequency penalty** — make the balance knob *local* (penalize by
+   neighborhood composition, not whole-grid counts), the natural pairing with #1.
+3. **Finite-size scaling** of the absorbing transition (vary `L`) to test
    whether `T_c ≈ 1.3` is a true critical point or a finite-size crossover.
-3. **Larger base models** — does synchronization-under-common-noise persist
-   with scale, or do bigger models develop a genuinely chaotic (non-syncing)
-   regime?
-4. **Conditional-Lyapunov sweep** — map the short-time rate and synchronization
-   time vs. temperature to locate where (if ever) asymptotic synchronization
-   breaks down.
+4. **Larger / local-attention base models** — does common-noise synchronization
+   (causal) vs. true chaos (masked) track architecture or scale?
+5. **Conditional-Lyapunov sweep** — map short-time rate and synchronization time
+   vs. temperature to locate where asymptotic synchronization breaks down.
