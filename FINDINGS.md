@@ -354,8 +354,28 @@ non-localised pattern, not spaceships.
 
 **Standing:** the local penalty is the right mechanism and opens the sparse
 territory the global knob could not, but the bar for a lifeform — a structure
-that is *both* low-density *and* robust across L — is unmet. Mapping
-(L × window × penalty) for an L-robust low-density island is the open thread.
+that is *both* low-density *and* robust across L — is unmet.
+
+**The (L × window × penalty) map closes that thread (negative).** Across
+windows 1–3 × penalties 1.5–3.0 × eight lattice sizes (L = 56…112), **no
+(window, penalty) holds a low-density localized periodic structure at more than
+2 of 8 sizes** — the best is `w=2, pen=2.0` at 2/8 (period-8, only L=64,80), and
+there is no single period that recurs across many L. So no lifeform candidate.
+The phase structure is clean, though: the penalty carves a knife-edge — `w=1`
+drains to vacuum almost everywhere; `w=3` fills (ρ≈0.9) at every penalty; `w=2`
+sits *between* them, and only there, in a thin sliver around `pen≈2.0`, does
+localized structure appear at all — tipping to fill by `pen≈2.5`. The localized
+structures that live on that sliver are **standing-wave resonances pinned to
+commensurate L, not free lifeforms.**
+
+This is the cleanest statement of the project's negative: with all three of
+Conway's ingredients now present — **locality** (windowed ring), **refractory
+death**, and a **local birth/death balance** (this penalty) — there is still no
+robust localized still-life, oscillator, or glider. The missing piece is not a
+knob left unturned; it is that an LLM's learned local rule lacks Conway's
+fine-tuned `B3/S23` balance. The penalty pushes the dynamics to the edge between
+vacuum and fill, but for these models that edge is a **lattice-size-pinned
+knife-edge**, not a stable basin a lifeform can occupy.
 
 ## 11. Next steps
 
@@ -366,8 +386,9 @@ that is *both* low-density *and* robust across L — is unmet. Mapping
    for gliders; this is the experiment most likely to finally produce one.
 2. **Local frequency penalty** — make the balance knob *local* (penalize by
    neighborhood composition, not whole-grid counts), the natural pairing with #1.
-   *(Done — see §14: opens a sparse regime, but no L-robust localized structure
-   yet; an (L × window × penalty) map for a robust low-density island is open.)*
+   *(Done — see §14: opens a sparse regime, but the (L × window × penalty) map
+   found no L-robust localized structure; the sparse band is a lattice-pinned
+   knife-edge between vacuum and fill, not a lifeform basin.)*
 3. **Finite-size scaling** of the absorbing transition (vary `L`) to test
    whether `T_c ≈ 1.3` is a true critical point or a finite-size crossover.
 4. **Larger / local-attention base models** — does common-noise synchronization
