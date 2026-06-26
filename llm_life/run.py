@@ -90,20 +90,28 @@ def _to_np(states) -> np.ndarray:
     return states.detach().to("cpu").numpy()
 
 
-def _make_init(args, info):
+def _make_init(args, info, tok=None):
     """Build the initial generation. seed-mode 'random' = full random lattice;
     'single' = one live cell on a dead background (the classic glider seed);
-    'patch' = a small block of live cells on a dead background."""
+    'patch' = a small block of live cells. If --seed-text is given, the live
+    region is those exact tokens instead of random ones (control the input)."""
     import torch
     mode = getattr(args, "seed_mode", "random")
     L, vocab, device, dead = args.length, info["vocab"], info["device"], info["dead_token"]
-    if mode == "random":
+    seed_text = getattr(args, "seed_text", None)
+    if mode == "random" and not seed_text:
         return _random_init(None, L, vocab, device, args.seed)
     g = _gen(device, args.seed)
     state = torch.full((L,), dead, dtype=torch.long, device=device)
-    width = 1 if mode == "single" else max(1, getattr(args, "patch", 5))
-    lo = (L - width) // 2
-    state[lo:lo + width] = torch.randint(0, vocab, (width,), generator=g).to(device)
+    if seed_text:
+        ids = tok.encode(seed_text, add_special_tokens=False)
+        live = torch.tensor(ids, dtype=torch.long)
+    else:
+        width = 1 if mode == "single" else max(1, getattr(args, "patch", 5))
+        live = torch.randint(0, vocab, (width,), generator=g)
+    width = live.shape[0]
+    lo = max(0, (L - width) // 2)
+    state[lo:lo + width] = live[:L].to(device)
     return state
 
 
@@ -115,10 +123,11 @@ def cmd_single(args):
     auto.freq_penalty = getattr(args, "freq_penalty", 0.0)
     info["freq_penalty"] = auto.freq_penalty
     print(f"[info] {info}")
-    init = _make_init(args, info)
+    init = _make_init(args, info, tok)
     g = _gen(info["device"], args.seed + 1)
     states_t, _ = auto.trajectory(
-        init, args.steps, args.temp, args.absorbing, generator=g
+        init, args.steps, args.temp, args.absorbing, generator=g,
+        refractory=getattr(args, "refractory", 0),
     )
     states = _to_np(states_t)
 
@@ -134,9 +143,10 @@ def cmd_single(args):
     pen_tag = f"_p{args.freq_penalty}" if getattr(args, "freq_penalty", 0.0) else ""
     win_tag = f"_w{info['window']}" if info.get("window") else ""
     sm = getattr(args, "seed_mode", "random")
-    seed_tag = "" if sm == "random" else f"_{sm}"
-    tag = (f"{info['arch']}{win_tag}_T{args.temp}{pen_tag}{seed_tag}_L{args.length}_s{args.seed}"
-           f"{'_abs' if args.absorbing else ''}")
+    seed_tag = "_txt" if getattr(args, "seed_text", None) else ("" if sm == "random" else f"_{sm}")
+    ref_tag = f"_r{args.refractory}" if getattr(args, "refractory", 0) else ""
+    tag = (f"{info['arch']}{win_tag}_T{args.temp}{pen_tag}{seed_tag}{ref_tag}"
+           f"_L{args.length}_s{args.seed}{'_abs' if args.absorbing else ''}")
 
     # per-generation CSV
     csv_path = os.path.join(args.out, f"single_{tag}.csv")
@@ -147,6 +157,17 @@ def cmd_single(args):
         for t in range(len(rho)):
             w.writerow([t + 1, rho[t], live[t + 1], ent[t + 1]])
     print(f"[wrote] {csv_path}")
+
+    if getattr(args, "dump_tokens", False):
+        dead = info["dead_token"]
+        txt_path = os.path.join(args.out, f"tokens_{tag}.txt")
+        with open(txt_path, "w") as f:
+            f.write(f"# {info}\n# dead token {dead} = {tok.decode([dead])!r} shown as '.'\n")
+            for t in range(states.shape[0]):
+                cells = ["." if int(x) == dead else (tok.decode([int(x)]).strip() or "_")
+                         for x in states[t]]
+                f.write(f"g{t:>4} | " + " ".join(c[:8] for c in cells) + "\n")
+        print(f"[wrote] {txt_path}")
 
     # space-time diagram
     emb = model.get_input_embeddings().weight.detach().to("cpu").float().numpy()
@@ -458,6 +479,12 @@ def main():
     sp.add_argument("--seed-mode", choices=["random", "single", "patch"], default="random",
                     dest="seed_mode", help="initial generation (single/patch = glider seed)")
     sp.add_argument("--patch", type=int, default=5, help="live-block width for seed-mode patch")
+    sp.add_argument("--seed-text", default=None, dest="seed_text",
+                    help="seed the live region with these exact tokens (controls the input)")
+    sp.add_argument("--refractory", type=int, default=0,
+                    help="cells die after this many gens alive (Brian's-Brain decay; enables gliders)")
+    sp.add_argument("--dump-tokens", action="store_true", dest="dump_tokens",
+                    help="also write the decoded generation-by-generation token grid to a .txt")
     sp.add_argument("--animate", action="store_true", help="also write an animated GIF")
     sp.set_defaults(func=cmd_single)
 

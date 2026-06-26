@@ -1,0 +1,13 @@
+# {'device': 'cpu', 'vocab': 50265, 'dead_token': 49652, 'dead_token_str': "'Advertisements'", 'arch': 'local', 'model': 'distilroberta-base', 'window': 2, 'freq_penalty': 0.0}
+# dead token 49652 = 'Advertisements' shown as '.'
+g   0 | . . . . . . . . . . . . . comment reply . . . . . . . . . . . . .
+g   1 | . . . . . . . . . . . </s> Cancel Cancel </s> _ _ . . . . . . . . . . .
+g   2 | . . . . . . . . . </s> </s> Email Body Email Email Save </s> </s> _ . . . . . . . . .
+g   3 | . . . . . . . </s> </s> </s> Share News Print Cancel Cancel Address Save Save </s> </s> _ . . . . . . .
+g   4 | . . . . . </s> </s> </s> </s> # </s> Pin Email . . Save Cancel Save Save Save </s> </s> _ . . . . .
+g   5 | . . . </s> </s> </s> </s> . #### . Share . . Share </s> . . Save Cancel Save Save Save </s> </s> _ . . .
+g   6 | . </s> </s> </s> </s> . #### ######## _ ### . </s> Tweet </s> </s> </s> _ . . Save Cancel Save Save Save </s> </s> _ .
+g   7 | </s> </s> </s> . #### ######## _ ### . </s> Share Share </s> Share . . </s> Save _ . . Save Cancel Save Save Save </s> </s>
+g   8 | . . #### ######## _ ### . </s> </s> Tweet Tweet Tweet Tweet </s> _ </s> _ Related _ Save _ . . Save Cancel Save Save Save
+g   9 | Save ######## ######## ### . </s> </s> </s> Share Share Share Share Email . . Comments </s> Title </s> comments _ Save _ . . Save Save </s>
+g  10 | ######## ######## . ######## ### </s> </s> . Tweet . Tweet . . _ _ </s> . Comments _ Title _ Comments _ Save _ . . Save

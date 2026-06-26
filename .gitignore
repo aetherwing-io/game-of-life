@@ -18,3 +18,5 @@ results/*.csv
 # keep variant-tagged raw sweep data for reproducibility
 !results/sweep_raw_*.csv
 !results/sweep2d_raw_*.csv
+# keep decoded token grids
+!results/tokens_*.txt
