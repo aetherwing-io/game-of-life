@@ -41,18 +41,24 @@ def _build(args):
 
     device = pick_device(args.device)
     arch = getattr(args, "arch", "causal")
-    if arch == "masked":
-        from .automaton import MaskedLMAutomaton
+    if arch in ("masked", "local"):
         from .model import dead_token_id_mlm, load_mlm
 
         model_name = "distilroberta-base" if args.model == "gpt2" else args.model
         model, tok, device = load_mlm(model_name, device)
         dead = dead_token_id_mlm(model, tok, device)
-        auto = MaskedLMAutomaton(
-            model, dead_token=dead, mask_token=tok.mask_token_id,
+        common = dict(
+            model=model, dead_token=dead, mask_token=tok.mask_token_id,
             cls_token=tok.cls_token_id, sep_token=tok.sep_token_id, device=device,
         )
-        extra = {"arch": "masked", "model": model_name}
+        if arch == "local":
+            from .automaton import LocalMaskedLMAutomaton
+            auto = LocalMaskedLMAutomaton(window=getattr(args, "window", 4), **common)
+            extra = {"arch": "local", "model": model_name, "window": getattr(args, "window", 4)}
+        else:
+            from .automaton import MaskedLMAutomaton
+            auto = MaskedLMAutomaton(**common)
+            extra = {"arch": "masked", "model": model_name}
     else:
         from .automaton import LLMAutomaton
         from .model import dead_token_id, load
@@ -84,6 +90,23 @@ def _to_np(states) -> np.ndarray:
     return states.detach().to("cpu").numpy()
 
 
+def _make_init(args, info):
+    """Build the initial generation. seed-mode 'random' = full random lattice;
+    'single' = one live cell on a dead background (the classic glider seed);
+    'patch' = a small block of live cells on a dead background."""
+    import torch
+    mode = getattr(args, "seed_mode", "random")
+    L, vocab, device, dead = args.length, info["vocab"], info["device"], info["dead_token"]
+    if mode == "random":
+        return _random_init(None, L, vocab, device, args.seed)
+    g = _gen(device, args.seed)
+    state = torch.full((L,), dead, dtype=torch.long, device=device)
+    width = 1 if mode == "single" else max(1, getattr(args, "patch", 5))
+    lo = (L - width) // 2
+    state[lo:lo + width] = torch.randint(0, vocab, (width,), generator=g).to(device)
+    return state
+
+
 # --------------------------------------------------------------------------- #
 # single
 # --------------------------------------------------------------------------- #
@@ -92,7 +115,7 @@ def cmd_single(args):
     auto.freq_penalty = getattr(args, "freq_penalty", 0.0)
     info["freq_penalty"] = auto.freq_penalty
     print(f"[info] {info}")
-    init = _random_init(auto, args.length, info["vocab"], info["device"], args.seed)
+    init = _make_init(args, info)
     g = _gen(info["device"], args.seed + 1)
     states_t, _ = auto.trajectory(
         init, args.steps, args.temp, args.absorbing, generator=g
@@ -109,7 +132,10 @@ def cmd_single(args):
 
     os.makedirs(args.out, exist_ok=True)
     pen_tag = f"_p{args.freq_penalty}" if getattr(args, "freq_penalty", 0.0) else ""
-    tag = (f"{info['arch']}_T{args.temp}{pen_tag}_L{args.length}_s{args.seed}"
+    win_tag = f"_w{info['window']}" if info.get("window") else ""
+    sm = getattr(args, "seed_mode", "random")
+    seed_tag = "" if sm == "random" else f"_{sm}"
+    tag = (f"{info['arch']}{win_tag}_T{args.temp}{pen_tag}{seed_tag}_L{args.length}_s{args.seed}"
            f"{'_abs' if args.absorbing else ''}")
 
     # per-generation CSV
@@ -413,8 +439,10 @@ def main():
     p = argparse.ArgumentParser(description="LLM-as-cellular-automaton experiments")
     p.add_argument("--model", default="gpt2",
                    help="model name; default gpt2 (causal) or distilroberta-base (masked)")
-    p.add_argument("--arch", default="causal", choices=["causal", "masked"],
-                   help="causal LM (leftward neighborhood) or masked LM (bidirectional)")
+    p.add_argument("--arch", default="causal", choices=["causal", "masked", "local"],
+                   help="causal (leftward) | masked (bidirectional global) | local (windowed ring)")
+    p.add_argument("--window", type=int, default=4,
+                   help="neighborhood radius w for --arch local (window = 2w+1)")
     p.add_argument("--device", default="auto", help="auto|mps|cuda|cpu")
     p.add_argument("--out", default="results", help="output directory")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -427,6 +455,9 @@ def main():
     sp.add_argument("--absorbing", action="store_true")
     sp.add_argument("--freq-penalty", type=float, default=0.0, dest="freq_penalty",
                     help="overpopulation-death balance knob (0 = off)")
+    sp.add_argument("--seed-mode", choices=["random", "single", "patch"], default="random",
+                    dest="seed_mode", help="initial generation (single/patch = glider seed)")
+    sp.add_argument("--patch", type=int, default=5, help="live-block width for seed-mode patch")
     sp.add_argument("--animate", action="store_true", help="also write an animated GIF")
     sp.set_defaults(func=cmd_single)
 

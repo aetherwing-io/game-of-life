@@ -216,3 +216,50 @@ class MaskedLMAutomaton(BaseAutomaton):
         live = state != self.dead_token
         others_live = int(live.sum().item()) - live.long()
         return others_live == 0
+
+
+class LocalMaskedLMAutomaton(BaseAutomaton):
+    """Local + symmetric + periodic CA -- the faithful Conway analogue and the
+    setup most likely to support gliders.
+
+    Each site is predicted from ONLY its +/- w neighbours on a ring (wrap-around
+    boundary), with the centre masked. Because the neighbourhood is finite,
+    information has a finite propagation speed (<= w sites/generation) -- the
+    prerequisite for localized travelling structures that full attention
+    destroys. One generation is a single batched forward over L windows of
+    length 2w+1 (cheap: independent of L's effect on context).
+    """
+
+    def __init__(self, model, dead_token: int, mask_token: int, cls_token: int,
+                 sep_token: int, window: int, device: str):
+        super().__init__(model, dead_token, device)
+        self.mask_token = mask_token
+        self.cls_token = cls_token
+        self.sep_token = sep_token
+        self.window = window  # radius w
+
+    def _ring_index(self, L: int) -> torch.Tensor:
+        """(L, 2w+1) wrap-around neighbour indices for every site."""
+        w = self.window
+        offsets = torch.arange(-w, w + 1, device=self.device)
+        return (torch.arange(L, device=self.device).unsqueeze(1) + offsets.unsqueeze(0)) % L
+
+    @torch.no_grad()
+    def logits(self, state: torch.Tensor) -> torch.Tensor:
+        L = state.shape[0]
+        w = self.window
+        windows = state[self._ring_index(L)].clone()   # (L, 2w+1)
+        windows[:, w] = self.mask_token                 # mask each window's centre
+        cls = torch.full((L, 1), self.cls_token, dtype=torch.long, device=self.device)
+        sep = torch.full((L, 1), self.sep_token, dtype=torch.long, device=self.device)
+        inp = torch.cat([cls, windows, sep], dim=1)     # (L, 2w+3)
+        out = self.model(inp).logits                    # (L, 2w+3, V)
+        return out[:, w + 1]                            # centre prediction (after CLS) -> (L, V)
+
+    def _vacuum_mask(self, state: torch.Tensor) -> torch.Tensor:
+        """Local 'no birth from vacuum': a site is forced dead iff none of its
+        +/- w neighbours (excluding itself) is alive."""
+        L = state.shape[0]
+        nbr_live = state[self._ring_index(L)] != self.dead_token  # (L, 2w+1)
+        nbr_live[:, self.window] = False                          # don't count self
+        return nbr_live.sum(dim=1) == 0
