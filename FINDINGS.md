@@ -311,6 +311,52 @@ entropy, toward code/tooling). Strip the frame and there is no "I" lurking
 underneath — there's a code-and-zeros fixed point. That is a more interesting
 answer than the one predicted, and a slightly humbling one.
 
+## 14. Local frequency penalty — a sparse regime, but a fragile structure
+
+Next-step #2 (below), now implemented: `LocalMaskedLMAutomaton` gets a
+*neighbourhood-local* frequency penalty — each site's logit for a token is cut
+by `freq_penalty ×` (count of that token among its ±w spatial neighbours, centre
+excluded), the local analogue of Conway's overpopulation death. (The global
+penalty of §9 can only force whole-grid turnover; this one couples to local
+composition.)
+
+**What it buys: a genuinely new sparse regime.** Without it the local rule only
+ever *fills* (global oscillator, ρ→1) or *dies* (vacuum). At intermediate penalty
+an in-between opens: bert-base-uncased (dead token `'.'`, which dies at
+essentially every zero-penalty setting) instead settles at low density — ρ ≈
+0.07–0.25, a small live region on an otherwise-dead lattice. First time activity
+neither fills nor drains.
+
+**The catch: the structures in it are not robust.** The cleanest hit —
+bert-base `w=2, freq_penalty=2.0`, single seed, T=0 — is a **period-8 localised
+oscillator**: ~5–7 cells of conversational filler/punctuation (`and but … it oh
+the right "` ↔ `" " , " i … " the`) in a ~16-cell envelope, holding 100+ gens.
+But it is **not lattice-size-robust**, which a truly self-contained localised
+structure would be:
+
+| L | 48 | 56 | 64 | 72 | 80 | 88 | 96 | 112 | 128 |
+|---|---|---|---|---|---|---|---|---|---|
+| outcome | aperiodic | aperiodic | **period-8** | aperiodic | **period-8** | aperiodic | dead | dead | aperiodic |
+| tail ρ | 0.42 | 0.29 | 0.24 | 0.08 | 0.08 | 0.07 | 0.00 | 0.00 | 0.14 |
+
+The clean oscillator exists only at `L = 64, 80`; elsewhere it churns
+aperiodically or drains to vacuum. On a ring, a self-contained localised pattern
+should not care how much dead background surrounds it — so the L-sensitivity says
+this is a **commensurate standing-wave resonance perched at the edge of the
+vacuum basin**, not a free lifeform.
+
+**Gliders: none.** A fine-scan (24 seeds × penalty × refractory) found no
+translating localised structure. The single-cell seed washes out by g1, so the
+outcome is seed-independent. A centre-of-mass "drift" detector flagged
+candidates, but all were high-density (ρ≈0.55) delocalised patterns drifting
+*faster than the ±w light cone* — artifacts of measuring a centroid on a
+non-localised pattern, not spaceships.
+
+**Standing:** the local penalty is the right mechanism and opens the sparse
+territory the global knob could not, but the bar for a lifeform — a structure
+that is *both* low-density *and* robust across L — is unmet. Mapping
+(L × window × penalty) for an L-robust low-density island is the open thread.
+
 ## 11. Next steps
 
 1. **Local-neighborhood rule (the headline follow-up).** Restrict each site to
@@ -320,6 +366,8 @@ answer than the one predicted, and a slightly humbling one.
    for gliders; this is the experiment most likely to finally produce one.
 2. **Local frequency penalty** — make the balance knob *local* (penalize by
    neighborhood composition, not whole-grid counts), the natural pairing with #1.
+   *(Done — see §14: opens a sparse regime, but no L-robust localized structure
+   yet; an (L × window × penalty) map for a robust low-density island is open.)*
 3. **Finite-size scaling** of the absorbing transition (vary `L`) to test
    whether `T_c ≈ 1.3` is a true critical point or a finite-size crossover.
 4. **Larger / local-attention base models** — does common-noise synchronization
