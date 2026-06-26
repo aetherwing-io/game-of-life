@@ -90,6 +90,16 @@ def _to_np(states) -> np.ndarray:
     return states.detach().to("cpu").numpy()
 
 
+def _model_tag(name: str) -> str:
+    """Filename-safe slug for a model name: drop the org prefix and keep only
+    filename-safe characters, so e.g. 'Qwen/Qwen2.5-0.5B-Instruct' ->
+    'Qwen2.5-0.5B-Instruct'. Without this, two models sharing --arch/--temp/etc.
+    (e.g. a base/instruct pair) collide on the same output filename and silently
+    overwrite each other."""
+    base = name.rsplit("/", 1)[-1]
+    return "".join(c if (c.isalnum() or c in "._-") else "_" for c in base)
+
+
 def _make_init(args, info, tok=None):
     """Build the initial generation. seed-mode 'random' = full random lattice;
     'single' = one live cell on a dead background (the classic glider seed);
@@ -145,7 +155,8 @@ def cmd_single(args):
     sm = getattr(args, "seed_mode", "random")
     seed_tag = "_txt" if getattr(args, "seed_text", None) else ("" if sm == "random" else f"_{sm}")
     ref_tag = f"_r{args.refractory}" if getattr(args, "refractory", 0) else ""
-    tag = (f"{info['arch']}{win_tag}_T{args.temp}{pen_tag}{seed_tag}{ref_tag}"
+    mtag = _model_tag(info["model"])
+    tag = (f"{info['arch']}{win_tag}_{mtag}_T{args.temp}{pen_tag}{seed_tag}{ref_tag}"
            f"_L{args.length}_s{args.seed}{'_abs' if args.absorbing else ''}")
 
     # per-generation CSV
