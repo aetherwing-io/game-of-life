@@ -138,6 +138,7 @@ def cmd_single(args):
     states_t, _ = auto.trajectory(
         init, args.steps, args.temp, args.absorbing, generator=g,
         refractory=getattr(args, "refractory", 0),
+        update_frac=getattr(args, "update_frac", 1.0),
     )
     states = _to_np(states_t)
 
@@ -155,8 +156,9 @@ def cmd_single(args):
     sm = getattr(args, "seed_mode", "random")
     seed_tag = "_txt" if getattr(args, "seed_text", None) else ("" if sm == "random" else f"_{sm}")
     ref_tag = f"_r{args.refractory}" if getattr(args, "refractory", 0) else ""
+    uf_tag = f"_uf{args.update_frac}" if getattr(args, "update_frac", 1.0) != 1.0 else ""
     mtag = _model_tag(info["model"])
-    tag = (f"{info['arch']}{win_tag}_{mtag}_T{args.temp}{pen_tag}{seed_tag}{ref_tag}"
+    tag = (f"{info['arch']}{win_tag}_{mtag}_T{args.temp}{pen_tag}{seed_tag}{ref_tag}{uf_tag}"
            f"_L{args.length}_s{args.seed}{'_abs' if args.absorbing else ''}")
 
     # per-generation CSV
@@ -504,6 +506,9 @@ def main():
                     help="seed the live region with these exact tokens (controls the input)")
     sp.add_argument("--refractory", type=int, default=0,
                     help="cells die after this many gens alive (Brian's-Brain decay; enables gliders)")
+    sp.add_argument("--update-frac", type=float, default=1.0, dest="update_frac",
+                    help="asynchronous update: fraction of sites resampled per gen "
+                         "(1.0=synchronous; <1 gives a committed-memory substrate)")
     sp.add_argument("--dump-tokens", action="store_true", dest="dump_tokens",
                     help="also write the decoded generation-by-generation token grid to a .txt")
     sp.add_argument("--animate", action="store_true", help="also write an animated GIF")

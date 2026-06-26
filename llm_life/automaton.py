@@ -102,6 +102,7 @@ class BaseAutomaton:
         generator: torch.Generator,
         record_noise: bool = False,
         refractory: int = 0,
+        update_frac: float = 1.0,
     ):
         """Iterate the map. Returns (states (steps+1, L), noises or None).
 
@@ -113,6 +114,15 @@ class BaseAutomaton:
         more than ``refractory`` consecutive generations is forced dead. This
         gives the *trailing* death a travelling structure needs -- without it an
         active region can spread but never vacate, so it fills instead of moving.
+
+        ``update_frac`` < 1.0 makes the update *asynchronous*: each generation
+        only a random fraction of sites adopt the freshly-sampled token; the rest
+        retain their previous value as committed memory. 1.0 (default) is the
+        ordinary synchronous CA update and is byte-identical to before. Slowing
+        the overwrite gives a seeded pattern a substrate to persist in (e.g. so a
+        conflict can play out over many generations rather than being erased at
+        once) -- though for these models the dissipative genre attractor still
+        wins the fixed point; it mostly buys a much longer transient.
         """
         L = init.shape[0]
         states = torch.empty(steps + 1, L, dtype=torch.long, device=self.device)
@@ -121,13 +131,19 @@ class BaseAutomaton:
         cur = init
         age = (init != self.dead_token).long()  # generations a cell has been alive
         for t in range(steps):
-            cur, used = self.step(cur, temperature, absorbing, generator=generator)
+            prev = cur
+            nxt, used = self.step(cur, temperature, absorbing, generator=generator)
+            if update_frac < 1.0:
+                r = torch.rand(L, generator=generator, device=generator.device)
+                keep_new = (r < update_frac).to(self.device)
+                nxt = torch.where(keep_new, nxt, prev)
             if refractory:
-                alive = cur != self.dead_token
+                alive = nxt != self.dead_token
                 age = torch.where(alive, age + 1, torch.zeros_like(age))
                 too_old = age > refractory
-                cur = torch.where(too_old, torch.full_like(cur, self.dead_token), cur)
+                nxt = torch.where(too_old, torch.full_like(nxt, self.dead_token), nxt)
                 age = torch.where(too_old, torch.zeros_like(age), age)
+            cur = nxt
             states[t + 1] = cur
             if record_noise:
                 noises.append(used)
