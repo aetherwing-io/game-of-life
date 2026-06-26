@@ -16,6 +16,11 @@ dynamical-systems question:
 The LM is treated as a high-dimensional categorical map `F : V^L → V^L`, not as a
 writer. We strip away semantics and measure the *dynamics*.
 
+> **Results: see [`FINDINGS.md`](FINDINGS.md).** Short version — GPT-2 iterated
+> this way has *no* edge-of-chaos regime: it either collapses to a dead state or
+> sits in noise-driven disorder that *synchronizes* under common noise (not
+> deterministic chaos). Order appears only at `T=0`.
+
 ## The map
 
 State `s ∈ V^L` is a fixed-length sequence of token ids. One generation is a

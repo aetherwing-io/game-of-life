@@ -100,27 +100,40 @@ def hamming_curve(states_a: np.ndarray, states_b: np.ndarray) -> np.ndarray:
     return (states_a != states_b).sum(axis=1).astype(float)
 
 
-def lyapunov_estimate(hamming: np.ndarray, fit_frac: float = 0.5) -> dict:
-    """Early-time exponential growth rate of the Hamming separation.
+def lyapunov_estimate(hamming: np.ndarray, short_frac: float = 0.1) -> dict:
+    """Characterize a coupled-noise damage-spreading curve.
 
-    Fits log(hamming) ~ lambda * t over the initial ``fit_frac`` of the curve
-    (while separation is small and growth is roughly exponential). Returns the
-    slope ``lambda`` and the final/initial separation ratio. lambda > 0 =>
-    chaotic spreading; lambda ~ 0 with bounded ratio => ordered.
+    These curves are often NON-monotonic: a perturbation amplifies at short
+    times (local instability) and then, under shared noise, may heal back to
+    zero (common-noise-induced synchronization). A single exponential slope
+    misrepresents that, so we report the curve's actual shape:
+
+      * short_time_rate -- mean log-growth per step from t=0 to the peak
+                           (positive => initial amplification / local instability)
+      * peak_hamming    -- maximum separation reached
+      * time_to_peak    -- generation index of the peak
+      * final_hamming   -- separation at the end
+      * synchronized    -- True if the replicas re-converged (final ~ 0)
+      * lyapunov        -- log-slope over the rising segment [0, peak] (the
+                           short-time conditional exponent)
     """
     h = np.asarray(hamming, dtype=float)
-    T1 = h.size
-    n = max(2, int(T1 * fit_frac))
-    t = np.arange(n)
-    y = np.log(np.clip(h[:n], 1e-9, None))
-    # ignore leading region where separation is identically zero
-    mask = h[:n] > 0
-    if mask.sum() < 2:
-        lam = 0.0
+    peak_idx = int(np.argmax(h))
+    peak = float(h[peak_idx])
+    final = float(h[-1])
+    if peak_idx >= 1 and h[0] > 0 and peak > 0:
+        lam = float((np.log(peak) - np.log(h[0])) / peak_idx)
     else:
-        lam = float(np.polyfit(t[mask], y[mask], 1)[0])
+        lam = 0.0
+    n_short = max(1, int(h.size * short_frac))
+    short_rate = lam if peak_idx <= n_short else float(
+        (np.log(max(h[n_short], 1e-9)) - np.log(max(h[0], 1e-9))) / n_short
+    )
     return {
         "lyapunov": lam,
-        "final_hamming": float(h[-1]),
-        "max_hamming": float(h.max()),
+        "short_time_rate": short_rate,
+        "peak_hamming": peak,
+        "time_to_peak": peak_idx,
+        "final_hamming": final,
+        "synchronized": bool(final <= max(1.0, 0.01 * h.max())),
     }
