@@ -20,8 +20,16 @@ _EPS = 1e-20
 
 
 def gumbel_like(logits: torch.Tensor, generator: torch.Generator | None = None) -> torch.Tensor:
-    """Draw a Gumbel(0,1) tensor shaped like ``logits``."""
-    u = torch.rand(logits.shape, dtype=logits.dtype, device=logits.device, generator=generator)
+    """Draw a Gumbel(0,1) tensor shaped like ``logits``.
+
+    If ``generator`` lives on a different device than ``logits`` (e.g. a CPU
+    generator with MPS logits, since MPS has no device-side generator), the
+    uniforms are drawn on the generator's device and moved over.
+    """
+    if generator is not None and generator.device.type != logits.device.type:
+        u = torch.rand(logits.shape, dtype=logits.dtype, generator=generator).to(logits.device)
+    else:
+        u = torch.rand(logits.shape, dtype=logits.dtype, device=logits.device, generator=generator)
     return -torch.log(-torch.log(u + _EPS) + _EPS)
 
 

@@ -237,6 +237,11 @@ def _plot_sweep(temps, agg, args, info):
 # damage  (coupled-noise Lyapunov / butterfly)
 # --------------------------------------------------------------------------- #
 def cmd_damage(args):
+    import torch
+
+    from .automaton import StepNoise
+    from .sampler import gumbel_like
+
     auto, tok, model, info = _build(args)
     print(f"[info] {info}")
     vocab = info["vocab"]
@@ -244,18 +249,21 @@ def cmd_damage(args):
     for p in range(args.pairs):
         init = _random_init(auto, args.length, vocab, info["device"], 5000 * p + 3)
         g = _gen(info["device"], 5000 * p + 11)
-        # reference replica, recording the noise at every step
-        ref, noises = auto.trajectory(
-            init, args.steps, args.temp, args.absorbing, generator=g, record_noise=True
-        )
-        # perturbed replica: flip ONE site, then replay with identical noise
+        # two replicas differing in a single site; driven in lockstep with the
+        # SAME noise tensor each step (coupled noise) so any divergence is due
+        # to the perturbation alone. One Gumbel tensor is held at a time.
+        ref = init.clone()
         pert = init.clone()
         site = (7 * p + 1) % args.length
-        new_tok = int((int(pert[site].item()) + 1 + p) % vocab)
-        pert[site] = new_tok
-        pert_states = auto.replay_with_noise(pert, noises, args.temp, args.absorbing)
-
-        h = metrics.hamming_curve(_to_np(ref), _to_np(pert_states))
+        pert[site] = int((int(pert[site].item()) + 1 + p) % vocab)
+        h = [float((ref != pert).sum().item())]
+        template = torch.empty(args.length, vocab, dtype=torch.float32, device=info["device"])
+        for _ in range(args.steps):
+            shared = StepNoise(gumbel=gumbel_like(template, generator=g))  # shape only
+            ref, _ = auto.step(ref, args.temp, args.absorbing, noise=shared)
+            pert, _ = auto.step(pert, args.temp, args.absorbing, noise=shared)
+            h.append(float((ref != pert).sum().item()))
+        h = np.array(h, dtype=float)
         curves.append(h)
         est = metrics.lyapunov_estimate(h)
         print(f"  pair {p}: lambda={est['lyapunov']:+.4f}  "
