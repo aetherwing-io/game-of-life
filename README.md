@@ -152,6 +152,50 @@ instruct/chat model, whose RLHF attractors dominate every orbit. On an M-series
 Mac, `--device` auto-selects MPS; scale to `gpt2-large` / `pythia-1.4b` if the
 small model's dynamics are uninteresting.
 
+## Running on your own machine (handoff)
+
+`--device` auto-selects MPS on Apple Silicon. The interface is just `--model` /
+`--arch` / `--window`, so swapping models is one flag. Use **base** models for
+clean dynamics; the dead token and absorbing rule auto-adapt to any model.
+
+```bash
+# The locality result — a propagating, periodic CA (the closest to gliders).
+# Smaller window + lower T = more structure; refractory makes it travel.
+python -m llm_life.run --arch local --window 2 single \
+    --temp 0.0 --length 96 --steps 120 --absorbing \
+    --seed-mode single --refractory 3 --dump-tokens --animate
+
+# See what the cells ARE: decode the token grid to a .txt
+python -m llm_life.run --arch local --window 2 single \
+    --temp 0.3 --length 48 --steps 30 --absorbing --seed-mode single --dump-tokens
+
+# Control the input: does a coherent / out-of-genre seed escape the basin?
+python -m llm_life.run --arch local --window 3 single \
+    --temp 0.2 --length 64 --steps 80 --absorbing \
+    --seed-text " def function return value" --dump-tokens   # code-like seed
+python -m llm_life.run --arch local --window 3 single \
+    --temp 0.2 --length 64 --steps 80 --absorbing \
+    --seed-text " the quiet river at dawn" --dump-tokens      # prose seed
+```
+
+### Experiments worth running with more compute
+
+- **More capable / different-genre base models.** Swap `--model` for a larger
+  base model (`EleutherAI/pythia-1.4b` causal; `roberta-large`, `bert-large`, or
+  a code/BERT-of-code masked model for `--arch masked/local`). Prediction: bigger
+  = sharper = *deeper* attractor basins, so unfamiliar seeds snap back faster,
+  but the transient structure is richer and the "lifeform" tokens shift to that
+  model's training genre.
+- **Unfamiliar seeds × capable models.** `--seed-text` with out-of-distribution
+  content (a code model seeded with prose, or rare/foreign tokens) probes basin
+  depth — how far the model can be pushed before it collapses to its default
+  genre, and how long unusual structure survives under the local+refractory
+  scaffold. This is the experiment the local variant was built for.
+- **Window / refractory phase map.** Sweep `--window` (2–8) and `--refractory`
+  (1–6) at low T; somewhere in there is the most glider-rich regime.
+- **Local frequency penalty** (not yet implemented) — make the balance knob
+  neighbourhood-local rather than whole-grid; pair it with `--arch local`.
+
 ## A genuinely possible outcome
 
 GPT-2's geometry may have **no Class-4 band at all** — it might jump straight from

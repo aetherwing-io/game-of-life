@@ -10,12 +10,22 @@ and `results/damage_*_L128*.csv`; figures in `results/`.
 
 ## TL;DR
 
-**GPT-2 iterated as a cellular automaton has no Class-4 / edge-of-chaos regime
-— not under temperature, not under a global balance knob, not with a
-bidirectional rule.** The missing ingredient is *locality*: a full-attention LM
-mixes information globally every step, so no localized structure can persist.
-The single most structured texture observed was the masked/bidirectional
-variant near its transition (localized drifting clusters; sections 8–10).
+**Full-attention LLMs iterated as cellular automata have no Class-4 /
+edge-of-chaos regime — not under temperature, not under a global balance knob,
+not with a bidirectional rule.** The missing ingredient is *locality*: full
+attention mixes information globally every step, so no localized structure can
+persist (`ξ` pinned at its floor everywhere; sections 1–10).
+
+**Restoring locality changes everything (section 12).** A windowed-ring rule
+(each site predicted from only its ±w neighbours) gives finite signal speed and
+immediately produces what full attention could not: a single live cell
+**propagates at ~w sites/generation**, spatial correlation jumps to `ξ ≈ 18`
+(vs 1 for full attention), and stable periodic structures (oscillators) appear.
+Adding a refractory/decay rule (cells die after R generations alive — the
+Brian's-Brain mechanism) gives the *trailing* death that makes structures
+travel rather than fill. The "lifeforms" are made of the model's
+lowest-context attractor tokens — for distilroberta, web-page boilerplate
+(`Comments`, `Related`, `Next`, `»`); a fingerprint of its training data.
 
 Under temperature control it does one of two things:
 
@@ -211,6 +221,45 @@ a local neighborhood** — a sliding-window-attention model, an explicit attenti
 mask restricting each site to ±w neighbors, or a state-space/recurrent model
 with finite propagation speed. That is the experiment most likely to finally
 produce gliders, and it is the top remaining item below.
+
+## 12. Local windowed-ring variant — locality restores CA behavior
+
+`results/spacetime_local_*.png`, `tokens_local_*.txt`. distilroberta with each
+site predicted from only its ±w neighbours on a ring (periodic boundary), centre
+masked. This is the first variant with finite signal speed, and it confirms the
+section-10 prediction: **locality is what was missing.**
+
+- **Propagation.** A single live cell on a dead background throws off fronts that
+  travel at ~w sites/generation (the CA light-cone) — visible directly in the
+  decoded grid: gen 0 touches one site, gen 2 spans ±2, etc. Full attention had
+  no finite speed; this does.
+- **Spatial structure.** `ξ` jumps to ~18 (w=2, T=0) vs 1 for every
+  full-attention setting; smaller window and lower temperature give the most
+  structure. `τ_int` rises to 10–14 simultaneously — spatial order *and*
+  long memory at once.
+- **Stable periodic motifs.** Decoded grids show columns that lock into a
+  repeating pattern for many generations (oscillators / still-lifes).
+- **Refractory → travelling, not filling.** Adding the Brian's-Brain decay
+  (`--refractory R`: a cell dies after R generations alive) makes active regions
+  migrate and leave dead space behind. The `w=2, T=0, refractory=3` run shows a
+  propagating-front cone with a periodic checkerboard interior and diagonal
+  travelling bands — the closest to gliders the project produced.
+
+**What the cells are.** Decoding token ids (`--dump-tokens`) reveals the
+"lifeforms" are the model's lowest-context attractor: for distilroberta, web
+boilerplate — `Comments`, `Related`, `Posts`, `Tags`, `Next`, `Previous`, `»`.
+With `--seed-text` you can steer the *sub*-genre (seeding `" comment reply"`
+pulls it into comment-*form* chrome: `Cancel`, `Email`, `Save`, `Reply`) but not
+escape the basin. These tokens are *mutually predictive* in training data, which
+is exactly why they form stable self-consistent structures. The attractor is a
+fingerprint of the model's training mix — a code model would converge to
+brackets/`def`, an instruct model to assistant boilerplate.
+
+*Metric caveat:* for the period-2 checkerboard textures the refractory rule
+produces, `ξ` reads ~1 because adjacent cells *anti*-correlate (the
+change-indicator autocorrelation drops below 1/e at lag 1). Low `ξ` here means
+high-frequency structure, not absence of structure — read it together with the
+space-time image, which shows strong order.
 
 ## 11. Next steps
 
