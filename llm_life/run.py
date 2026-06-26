@@ -263,7 +263,12 @@ def cmd_sweep(args):
                   f"tau={tau:.2f} xi={xi:.2f}")
 
     os.makedirs(args.out, exist_ok=True)
-    raw = os.path.join(args.out, "sweep_raw.csv")
+    # Variant-tagged name (arch + model + mode) so distinct configs -- e.g. a
+    # base/instruct pair -- don't silently overwrite one scratch file. Matches
+    # the gitignore !sweep_raw_*.csv / !sweep_phasediagram_*.png keep-patterns.
+    mode = "absorbing" if args.absorbing else "soft"
+    stag = f"{info['arch']}_{_model_tag(info['model'])}_{mode}"
+    raw = os.path.join(args.out, f"sweep_raw_{stag}.csv")
     with open(raw, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
@@ -279,10 +284,10 @@ def cmd_sweep(args):
             e.append(vals.std(ddof=1) if vals.size > 1 else 0.0)
         return np.array(m), np.array(e)
 
-    _plot_sweep(temps, agg, args, info)
+    _plot_sweep(temps, agg, args, info, stag)
 
 
-def _plot_sweep(temps, agg, args, info):
+def _plot_sweep(temps, agg, args, info, stag):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -302,11 +307,11 @@ def _plot_sweep(temps, agg, args, info):
     for ax in axes[1]:
         ax.set_xlabel("temperature T")
     mode = "absorbing" if args.absorbing else "soft"
-    fig.suptitle(f"LLM-CA phase sweep — {args.model}, L={args.length}, "
+    fig.suptitle(f"LLM-CA phase sweep — {info['model']} ({info['arch']}), L={args.length}, "
                  f"{args.seeds} seeds, {mode}\n"
                  f"tau_int / xi peaks locate the edge-of-chaos band")
     fig.tight_layout(rect=(0, 0, 1, 0.95))
-    png = os.path.join(args.out, "sweep_phasediagram.png")
+    png = os.path.join(args.out, f"sweep_phasediagram_{stag}.png")
     fig.savefig(png, dpi=140)
     plt.close(fig)
     print(f"[wrote] {png}")
@@ -348,7 +353,7 @@ def cmd_sweep2d(args):
                   f"xi={grids['xi'][ip,jt]:.1f}")
 
     os.makedirs(args.out, exist_ok=True)
-    raw = os.path.join(args.out, f"sweep2d_raw_{info['arch']}.csv")
+    raw = os.path.join(args.out, f"sweep2d_raw_{info['arch']}_{_model_tag(info['model'])}.csv")
     with open(raw, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
@@ -378,7 +383,7 @@ def _plot_sweep2d(grids, temps, pens, args, info):
                  f"{args.seeds} seeds, {mode}\n"
                  f"disorder axis (T) x balance axis (penalty); look for a tau_int/xi ridge")
     fig.tight_layout(rect=(0, 0, 1, 0.95))
-    png = os.path.join(args.out, f"sweep2d_{info['arch']}_{mode}.png")
+    png = os.path.join(args.out, f"sweep2d_{info['arch']}_{_model_tag(info['model'])}_{mode}.png")
     fig.savefig(png, dpi=140)
     plt.close(fig)
     print(f"[wrote] {png}")
@@ -428,8 +433,13 @@ def cmd_damage(args):
           f"mean final separation={mean_h[-1]:.1f}/{args.length} sites")
 
     os.makedirs(args.out, exist_ok=True)
-    tag = f"{args.arch}_T{args.temp}_L{args.length}{'_abs' if args.absorbing else ''}"
-    csv_path = os.path.join(args.out, f"damage_{tag}.csv")
+    # Single tag for both CSV and PNG, including the model slug + arch from info
+    # (info['model']/['arch'] reflect the masked/local distilroberta substitution,
+    # which args.model/args.arch do not) so a base/instruct pair -- or a causal vs
+    # masked run -- no longer overwrite one another.
+    mode = "absorbing" if args.absorbing else "soft"
+    dtag = f"{info['arch']}_{_model_tag(info['model'])}_{mode}_T{args.temp}_L{args.length}"
+    csv_path = os.path.join(args.out, f"damage_{dtag}.csv")
     with open(csv_path, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["generation", "mean_hamming", "std_hamming"])
@@ -437,10 +447,10 @@ def cmd_damage(args):
             w.writerow([t, mean_h[t], std_h[t]])
     print(f"[wrote] {csv_path}")
 
-    _plot_damage(mean_h, std_h, args, overall)
+    _plot_damage(mean_h, std_h, args, overall, info, dtag)
 
 
-def _plot_damage(mean_h, std_h, args, overall):
+def _plot_damage(mean_h, std_h, args, overall, info, dtag):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -457,10 +467,10 @@ def _plot_damage(mean_h, std_h, args, overall):
             title=f"log scale — lambda={overall['lyapunov']:+.4f}")
     ax2.grid(alpha=0.3, which="both")
     mode = "absorbing" if args.absorbing else "soft"
-    fig.suptitle(f"coupled-noise damage spreading — {args.model} ({args.arch}), "
+    fig.suptitle(f"coupled-noise damage spreading — {info['model']} ({info['arch']}), "
                  f"T={args.temp}, L={args.length}, {args.pairs} pairs, {mode}")
     fig.tight_layout(rect=(0, 0, 1, 0.94))
-    png = os.path.join(args.out, f"damage_{args.arch}_{mode}_T{args.temp}.png")
+    png = os.path.join(args.out, f"damage_{dtag}.png")
     fig.savefig(png, dpi=140)
     plt.close(fig)
     print(f"[wrote] {png}")
