@@ -8,7 +8,9 @@ results/*
 !results/ref_rule*.png
 !results/ref_rule110.gif
 !results/spacetime_*.png
-!results/sweep_phasediagram.png
+!results/sweep_phasediagram*.png
 !results/damage_*.png
 results/*.log
 results/*.csv
+# keep variant-tagged raw sweep data for reproducibility
+!results/sweep_raw_*.csv

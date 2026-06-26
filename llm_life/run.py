@@ -166,7 +166,11 @@ def cmd_sweep(args):
             rho = metrics.activity(states)[burn:]
             ent = metrics.token_entropy(states)[burn:]
             live = metrics.live_density(states, info["dead_token"])[burn:]
-            tau = metrics.integrated_autocorr_time(metrics.activity(states))
+            # tau_int / xi must be measured on the post-burn STEADY STATE, not
+            # the full trajectory -- otherwise the slow absorbing transient
+            # inflates the autocorrelation and masquerades as critical slowing
+            # down. (Edge-of-chaos shows up as a *peak* here, not a plateau.)
+            tau = metrics.integrated_autocorr_time(metrics.activity(states)[burn:])
             xi = metrics.spatial_corr_length(states[burn:])
             rows.append({
                 "temp": T, "seed": s,
