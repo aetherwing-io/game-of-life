@@ -8,7 +8,9 @@ results/*
 !results/ref_rule*.png
 !results/ref_rule110.gif
 !results/spacetime_*.png
-!results/sweep_phasediagram*.png
+# keep only variant-tagged sweep diagrams; the bare one is a scratch overwrite
+!results/sweep_phasediagram_*.png
+results/sweep_phasediagram.png
 !results/damage_*.png
 results/*.log
 results/*.csv
