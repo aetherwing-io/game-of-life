@@ -261,6 +261,56 @@ change-indicator autocorrelation drops below 1/e at lag 1). Low `ξ` here means
 high-frequency structure, not absence of structure — read it together with the
 space-time image, which shows strong order.
 
+## 13. Identity probe: does an instruct model have a stable "I"?
+
+Seed `" I am"` (one live cell on a dead background), `--arch causal`, T=0.3,
+L=64, 150 steps; Qwen2.5-0.5B **base** vs **Instruct**. Reproduced
+independently (this repo + a separate clone). The hypothesis: a base model has
+no installed self and dissolves `" I am"`, while an RLHF instruct model locks
+into a persona still-life (`" I am an AI assistant"`).
+
+**The base half held; the instruct half did not.** Neither model has a stable
+"I":
+
+- **Base** → `" I am"` is gone by g1, replaced by a frozen still-life of
+  **Chinese standardized-test boilerplate** ("以下是中国关于工程考试的单项选择题，
+  请选出正确答案") with a churning A/B/C/D · 答案 option field. A training-data /
+  training-objective fingerprint. No self.
+- **Instruct** → also strips `" I am"`, but collapses to **code / API / doc
+  boilerplate** (`/ json ### \`\`\` .md README python`) over a vast field of `0`,
+  with only *transient* first-person flicker (stray `I`, `help`, `Please`) that
+  never locks. No persona still-life.
+
+**The sharpest single result is the vacuum-token flip.** The dead token (argmax
+from BOS) is `'Human'` for the base and `'/API'` for the Instruct model — post-
+training moved the model's ground state from a conversational turn-marker to a
+code/tooling token. One token of evidence that Qwen2.5's post-training is
+code/agent-weighted, not persona-weighted.
+
+**Robustness:** the dead-token flip, the entropy drop (Instruct ~2.0 vs base
+~4.4 bits), and the activity drop (~0.40 vs ~0.60) reproduced cleanly across
+runs. `τ_int` did **not** — one run measured Instruct ≫ base (16.8 vs 3.9),
+another a much smaller gap (6.4 vs 4.0); `τ_int` is the correlation time of a
+fluctuating series and is seed-sensitive, so its *magnitude* is not a reliable
+single-run statistic here (the *direction*, Instruct deeper, held).
+
+**Chasing the persona (the obvious objection).** The assistant persona lives
+behind chat scaffolding, so maybe bare `" I am"` never enters the chat manifold.
+Seeding `"<|im_start|>assistant\nI am"` at T=0 was tested — and the persona
+*still* did not appear: the scaffold tokens vanish by g1 and the system freezes
+to a date/number still-life (`/ 2 0 2 3 … 0 0 0`, ρ=0.026, entropy 0.92 bits,
+the deepest fixed point observed). The reason is structural: the CA needs a
+uniform dead background, but a chat persona needs a coherent multi-token frame —
+an embedded scaffold can't establish that frame against a sea of dead tokens.
+
+**Conclusion.** The assistant persona is a **conditional** attractor — a
+response to a fully-formed chat context, not a standing structure in the model's
+*unconditional* token dynamics. RLHF didn't install a self that the loop can
+surface; it **deepened and relocated** the unconditional basin (sharper, lower-
+entropy, toward code/tooling). Strip the frame and there is no "I" lurking
+underneath — there's a code-and-zeros fixed point. That is a more interesting
+answer than the one predicted, and a slightly humbling one.
+
 ## 11. Next steps
 
 1. **Local-neighborhood rule (the headline follow-up).** Restrict each site to
