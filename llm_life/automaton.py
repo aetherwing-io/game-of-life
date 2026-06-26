@@ -92,6 +92,52 @@ class BaseAutomaton:
     def random_state(self, length: int, vocab_size: int, generator: torch.Generator) -> torch.Tensor:
         return torch.randint(0, vocab_size, (length,), generator=generator, device=self.device)
 
+    @torch.no_grad()
+    def trajectory(
+        self,
+        init: torch.Tensor,
+        steps: int,
+        temperature: float,
+        absorbing: bool,
+        generator: torch.Generator,
+        record_noise: bool = False,
+    ):
+        """Iterate the map. Returns (states (steps+1, L), noises or None).
+
+        ``record_noise`` keeps every step's Gumbel tensor so a second replica
+        can be driven with identical noise (coupled-noise damage spreading).
+        """
+        L = init.shape[0]
+        states = torch.empty(steps + 1, L, dtype=torch.long, device=self.device)
+        states[0] = init
+        noises = [] if record_noise else None
+        cur = init
+        for t in range(steps):
+            cur, used = self.step(cur, temperature, absorbing, generator=generator)
+            states[t + 1] = cur
+            if record_noise:
+                noises.append(used)
+        return states, noises
+
+    @torch.no_grad()
+    def replay_with_noise(
+        self,
+        init: torch.Tensor,
+        noises: list[StepNoise],
+        temperature: float,
+        absorbing: bool,
+    ) -> torch.Tensor:
+        """Iterate from ``init`` reusing a recorded noise sequence (the coupled
+        replica of a damage-spreading pair)."""
+        L = init.shape[0]
+        states = torch.empty(len(noises) + 1, L, dtype=torch.long, device=self.device)
+        states[0] = init
+        cur = init
+        for t, n in enumerate(noises):
+            cur, _ = self.step(cur, temperature, absorbing, noise=n)
+            states[t + 1] = cur
+        return states
+
 
 class LLMAutomaton(BaseAutomaton):
     """Causal variant: each site is regenerated from its entire *left* context
@@ -170,49 +216,3 @@ class MaskedLMAutomaton(BaseAutomaton):
         live = state != self.dead_token
         others_live = int(live.sum().item()) - live.long()
         return others_live == 0
-
-    @torch.no_grad()
-    def trajectory(
-        self,
-        init: torch.Tensor,
-        steps: int,
-        temperature: float,
-        absorbing: bool,
-        generator: torch.Generator,
-        record_noise: bool = False,
-    ):
-        """Iterate the map. Returns (states (steps+1, L), noises or None).
-
-        ``record_noise`` keeps every step's Gumbel tensor so a second replica
-        can be driven with identical noise (coupled-noise damage spreading).
-        """
-        L = init.shape[0]
-        states = torch.empty(steps + 1, L, dtype=torch.long, device=self.device)
-        states[0] = init
-        noises = [] if record_noise else None
-        cur = init
-        for t in range(steps):
-            cur, used = self.step(cur, temperature, absorbing, generator=generator)
-            states[t + 1] = cur
-            if record_noise:
-                noises.append(used)
-        return states, noises
-
-    @torch.no_grad()
-    def replay_with_noise(
-        self,
-        init: torch.Tensor,
-        noises: list[StepNoise],
-        temperature: float,
-        absorbing: bool,
-    ) -> torch.Tensor:
-        """Iterate from ``init`` reusing a recorded noise sequence (the coupled
-        replica of a damage-spreading pair)."""
-        L = init.shape[0]
-        states = torch.empty(len(noises) + 1, L, dtype=torch.long, device=self.device)
-        states[0] = init
-        cur = init
-        for t, n in enumerate(noises):
-            cur, _ = self.step(cur, temperature, absorbing, noise=n)
-            states[t + 1] = cur
-        return states
