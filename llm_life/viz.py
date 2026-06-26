@@ -15,11 +15,14 @@ import numpy as np
 
 def embedding_rgb_table(embedding_matrix: np.ndarray) -> np.ndarray:
     """(V, d) embeddings -> (V, 3) RGB in [0,1] via top-3 PCA components."""
-    X = embedding_matrix.astype(np.float64)
+    # Some checkpoints have non-finite or fp16-overflowing embedding rows (e.g.
+    # untrained/padding rows, or fp16 weights); scrub them so the SVD/matmul
+    # don't propagate NaN/Inf into the colour table (which blanks the image).
+    X = np.nan_to_num(embedding_matrix.astype(np.float64), nan=0.0, posinf=0.0, neginf=0.0)
     X = X - X.mean(axis=0, keepdims=True)
     # top-3 right singular vectors
     _, _, Vt = np.linalg.svd(X, full_matrices=False)
-    proj = X @ Vt[:3].T  # (V, 3)
+    proj = np.nan_to_num(X @ Vt[:3].T)  # (V, 3)
     lo = proj.min(axis=0, keepdims=True)
     hi = proj.max(axis=0, keepdims=True)
     rng = np.where(hi - lo == 0, 1.0, hi - lo)

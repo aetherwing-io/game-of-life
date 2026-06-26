@@ -270,6 +270,30 @@ class LocalMaskedLMAutomaton(BaseAutomaton):
         out = self.model(inp).logits                    # (L, 2w+3, V)
         return out[:, w + 1]                            # centre prediction (after CLS) -> (L, V)
 
+    def _apply_freq_penalty(self, lg: torch.Tensor, state: torch.Tensor) -> torch.Tensor:
+        """Neighbourhood-LOCAL frequency penalty -- Conway's overpopulation-death
+        balance, made local. Each site's logit for a token is reduced in
+        proportion to how many of that site's +/-w *spatial neighbours* (excluding
+        the centre) already hold that token, so a token is discouraged from
+        appearing where it is locally over-represented.
+
+        This is the natural pairing with the local rule and the knob the global
+        penalty could not provide: the global version (BaseAutomaton, whole-grid
+        bincount) can only force global turnover and floods to noise (FINDINGS
+        sec 9); a *local* density-dependent death is what lets a structure sit at
+        the edge between growth and death -- the precondition for droplet-stable
+        localized lifeforms (still-lifes / gliders) rather than fill-or-die.
+        """
+        if not self.freq_penalty:
+            return lg
+        L, V = lg.shape
+        win = state[self._ring_index(L)]                       # (L, 2w+1) neighbour tokens
+        w = self.window
+        nbr = torch.cat([win[:, :w], win[:, w + 1:]], dim=1)   # drop centre -> (L, 2w)
+        counts = torch.zeros(L, V, dtype=lg.dtype, device=lg.device)
+        counts.scatter_add_(1, nbr, torch.ones_like(nbr, dtype=lg.dtype))
+        return lg - self.freq_penalty * counts
+
     def _vacuum_mask(self, state: torch.Tensor) -> torch.Tensor:
         """Local 'no birth from vacuum': a site is forced dead iff none of its
         +/- w neighbours (excluding itself) is alive."""
