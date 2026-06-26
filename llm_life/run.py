@@ -37,21 +37,38 @@ def _gen(device: str, seed: int):
 
 
 def _build(args):
-    from .automaton import LLMAutomaton
-    from .model import dead_token_id, load, pick_device
+    from .model import pick_device
 
     device = pick_device(args.device)
-    model, tok, device = load(args.model, device)
-    bos = tok.bos_token_id if tok.bos_token_id is not None else tok.eos_token_id
-    dead = dead_token_id(model, tok, bos, device)
-    auto = LLMAutomaton(model, dead_token=dead, bos_token=bos, device=device)
-    vocab = model.config.vocab_size
+    arch = getattr(args, "arch", "causal")
+    if arch == "masked":
+        from .automaton import MaskedLMAutomaton
+        from .model import dead_token_id_mlm, load_mlm
+
+        model_name = "distilroberta-base" if args.model == "gpt2" else args.model
+        model, tok, device = load_mlm(model_name, device)
+        dead = dead_token_id_mlm(model, tok, device)
+        auto = MaskedLMAutomaton(
+            model, dead_token=dead, mask_token=tok.mask_token_id,
+            cls_token=tok.cls_token_id, sep_token=tok.sep_token_id, device=device,
+        )
+        extra = {"arch": "masked", "model": model_name}
+    else:
+        from .automaton import LLMAutomaton
+        from .model import dead_token_id, load
+
+        model, tok, device = load(args.model, device)
+        bos = tok.bos_token_id if tok.bos_token_id is not None else tok.eos_token_id
+        dead = dead_token_id(model, tok, bos, device)
+        auto = LLMAutomaton(model, dead_token=dead, bos_token=bos, device=device)
+        extra = {"arch": "causal", "model": args.model}
+
     info = {
         "device": device,
-        "vocab": vocab,
+        "vocab": model.config.vocab_size,
         "dead_token": dead,
         "dead_token_str": repr(tok.decode([dead])),
-        "bos": bos,
+        **extra,
     }
     return auto, tok, model, info
 
@@ -89,7 +106,7 @@ def cmd_single(args):
           f"tau_int={tau:.2f}  xi={xi:.2f}  final live={live[-1]:.4f}")
 
     os.makedirs(args.out, exist_ok=True)
-    tag = f"T{args.temp}_L{args.length}_s{args.seed}{'_abs' if args.absorbing else ''}"
+    tag = f"{info['arch']}_T{args.temp}_L{args.length}_s{args.seed}{'_abs' if args.absorbing else ''}"
 
     # per-generation CSV
     csv_path = os.path.join(args.out, f"single_{tag}.csv")
@@ -104,7 +121,7 @@ def cmd_single(args):
     # space-time diagram
     emb = model.get_input_embeddings().weight.detach().to("cpu").float().numpy()
     rgb = embedding_rgb_table(emb)
-    title = (f"{args.model}  T={args.temp}  L={args.length}  "
+    title = (f"{info['model']} ({info['arch']})  T={args.temp}  L={args.length}  "
              f"{'absorbing' if args.absorbing else 'soft'}")
     png = os.path.join(args.out, f"spacetime_{tag}.png")
     save_spacetime(states, rgb, png, title=title)
@@ -277,7 +294,7 @@ def cmd_damage(args):
           f"mean final separation={mean_h[-1]:.1f}/{args.length} sites")
 
     os.makedirs(args.out, exist_ok=True)
-    tag = f"T{args.temp}_L{args.length}{'_abs' if args.absorbing else ''}"
+    tag = f"{args.arch}_T{args.temp}_L{args.length}{'_abs' if args.absorbing else ''}"
     csv_path = os.path.join(args.out, f"damage_{tag}.csv")
     with open(csv_path, "w", newline="") as f:
         w = csv.writer(f)
@@ -306,10 +323,10 @@ def _plot_damage(mean_h, std_h, args, overall):
             title=f"log scale — lambda={overall['lyapunov']:+.4f}")
     ax2.grid(alpha=0.3, which="both")
     mode = "absorbing" if args.absorbing else "soft"
-    fig.suptitle(f"coupled-noise damage spreading — {args.model}, T={args.temp}, "
-                 f"L={args.length}, {args.pairs} pairs, {mode}")
+    fig.suptitle(f"coupled-noise damage spreading — {args.model} ({args.arch}), "
+                 f"T={args.temp}, L={args.length}, {args.pairs} pairs, {mode}")
     fig.tight_layout(rect=(0, 0, 1, 0.94))
-    png = os.path.join(args.out, f"damage_{mode}_T{args.temp}.png")
+    png = os.path.join(args.out, f"damage_{args.arch}_{mode}_T{args.temp}.png")
     fig.savefig(png, dpi=140)
     plt.close(fig)
     print(f"[wrote] {png}")
@@ -318,7 +335,10 @@ def _plot_damage(mean_h, std_h, args, overall):
 # --------------------------------------------------------------------------- #
 def main():
     p = argparse.ArgumentParser(description="LLM-as-cellular-automaton experiments")
-    p.add_argument("--model", default="gpt2", help="base (non-instruct) causal LM")
+    p.add_argument("--model", default="gpt2",
+                   help="model name; default gpt2 (causal) or distilroberta-base (masked)")
+    p.add_argument("--arch", default="causal", choices=["causal", "masked"],
+                   help="causal LM (leftward neighborhood) or masked LM (bidirectional)")
     p.add_argument("--device", default="auto", help="auto|mps|cuda|cpu")
     p.add_argument("--out", default="results", help="output directory")
     sub = p.add_subparsers(dest="cmd", required=True)

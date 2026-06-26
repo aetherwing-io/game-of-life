@@ -31,6 +31,28 @@ def load(model_name: str, device: str):
     return model, tok, device
 
 
+def load_mlm(model_name: str, device: str):
+    """Load a masked language model and its tokenizer (for the bidirectional CA)."""
+    from transformers import AutoModelForMaskedLM, AutoTokenizer
+
+    tok = AutoTokenizer.from_pretrained(model_name)
+    dtype = torch.float32 if device == "cpu" else torch.float16
+    model = AutoModelForMaskedLM.from_pretrained(model_name, dtype=dtype)
+    model.to(device)
+    model.eval()
+    return model, tok, device
+
+
+def dead_token_id_mlm(model, tokenizer, device: str) -> int:
+    """Ground-state token for an MLM: the argmax prediction for a single masked
+    position with no other content (just CLS [MASK] SEP)."""
+    with torch.no_grad():
+        ids = [tokenizer.cls_token_id, tokenizer.mask_token_id, tokenizer.sep_token_id]
+        inp = torch.tensor([ids], device=device)
+        logits = model(inp).logits[0, 1]  # the masked position
+        return int(logits.argmax().item())
+
+
 def dead_token_id(model, tokenizer, bos_token: int, device: str) -> int:
     """The model's "ground state" token: the argmax prediction from BOS alone.
 

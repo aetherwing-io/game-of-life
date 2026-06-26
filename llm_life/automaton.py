@@ -42,12 +42,50 @@ class StepNoise:
     gumbel: torch.Tensor
 
 
-class LLMAutomaton:
-    def __init__(self, model, dead_token: int, bos_token: int, device: str):
+class BaseAutomaton:
+    """Shared iteration machinery. A concrete automaton defines its transition
+    by implementing ``logits(state) -> (L, V)`` (the next-gen distribution at
+    every site) and ``_vacuum_mask(state)`` (which sites the absorbing rule
+    forces to the dead token)."""
+
+    def __init__(self, model, dead_token: int, device: str):
         self.model = model
         self.dead_token = dead_token
-        self.bos_token = bos_token
         self.device = device
+
+    def logits(self, state: torch.Tensor) -> torch.Tensor:  # pragma: no cover
+        raise NotImplementedError
+
+    def _vacuum_mask(self, state: torch.Tensor) -> torch.Tensor:  # pragma: no cover
+        raise NotImplementedError
+
+    def step(
+        self,
+        state: torch.Tensor,
+        temperature: float,
+        absorbing: bool,
+        noise: StepNoise | None = None,
+        generator: torch.Generator | None = None,
+    ) -> tuple[torch.Tensor, StepNoise]:
+        """Advance one generation. Returns (next_state, noise_used)."""
+        lg = self.logits(state)
+        gumbel = noise.gumbel if noise is not None else gumbel_like(lg, generator=generator)
+        nxt = sample(lg, temperature, noise=gumbel)
+        if absorbing:
+            nxt = torch.where(self._vacuum_mask(state), self.dead_token, nxt)
+        return nxt, StepNoise(gumbel=gumbel)
+
+    def random_state(self, length: int, vocab_size: int, generator: torch.Generator) -> torch.Tensor:
+        return torch.randint(0, vocab_size, (length,), generator=generator, device=self.device)
+
+
+class LLMAutomaton(BaseAutomaton):
+    """Causal variant: each site is regenerated from its entire *left* context
+    (directed, long-range neighborhood)."""
+
+    def __init__(self, model, dead_token: int, bos_token: int, device: str):
+        super().__init__(model, dead_token, device)
+        self.bos_token = bos_token
 
     @torch.no_grad()
     def logits(self, state: torch.Tensor) -> torch.Tensor:
@@ -76,24 +114,48 @@ class LLMAutomaton:
         vacuum[1:] = prefix_all_dead[:-1]      # site k: sites 0..k-1 all dead
         return vacuum
 
-    def step(
-        self,
-        state: torch.Tensor,
-        temperature: float,
-        absorbing: bool,
-        noise: StepNoise | None = None,
-        generator: torch.Generator | None = None,
-    ) -> tuple[torch.Tensor, StepNoise]:
-        """Advance one generation. Returns (next_state, noise_used)."""
-        lg = self.logits(state)
-        gumbel = noise.gumbel if noise is not None else gumbel_like(lg, generator=generator)
-        nxt = sample(lg, temperature, noise=gumbel)
-        if absorbing:
-            nxt = torch.where(self._vacuum_mask(state), self.dead_token, nxt)
-        return nxt, StepNoise(gumbel=gumbel)
 
-    def random_state(self, length: int, vocab_size: int, generator: torch.Generator) -> torch.Tensor:
-        return torch.randint(0, vocab_size, (length,), generator=generator, device=self.device)
+class MaskedLMAutomaton(BaseAutomaton):
+    """Masked-LM variant: the faithful Conway-like rule. Every site is
+    recomputed *simultaneously* from the rest of the sequence. To get a
+    non-trivial prediction for a site we must mask it, so one generation is a
+    single batched forward pass over L copies of the sequence, each with a
+    different position masked.
+
+    Neighborhood note: attention here is *bidirectional* (symmetric -- a real
+    improvement over the causal leftward rule) but still *global*: each site
+    attends to all others, not a local window. A strictly local-window variant
+    is left as future work.
+    """
+
+    def __init__(self, model, dead_token: int, mask_token: int,
+                 cls_token: int, sep_token: int, device: str):
+        super().__init__(model, dead_token, device)
+        self.mask_token = mask_token
+        self.cls_token = cls_token
+        self.sep_token = sep_token
+
+    @torch.no_grad()
+    def logits(self, state: torch.Tensor) -> torch.Tensor:
+        """(L,) -> (L, V): each row is the prediction for that site given all the
+        others (that site masked), wrapped in CLS/SEP."""
+        L = state.shape[0]
+        idx = torch.arange(L, device=self.device)
+        batch = state.unsqueeze(0).repeat(L, 1).clone()   # (L, L)
+        batch[idx, idx] = self.mask_token                 # mask one distinct site per row
+        cls = torch.full((L, 1), self.cls_token, dtype=torch.long, device=self.device)
+        sep = torch.full((L, 1), self.sep_token, dtype=torch.long, device=self.device)
+        inp = torch.cat([cls, batch, sep], dim=1)         # (L, L+2)
+        out = self.model(inp).logits                      # (L, L+2, V)
+        return out[idx, idx + 1]                          # masked-site logits per row -> (L, V)
+
+    def _vacuum_mask(self, state: torch.Tensor) -> torch.Tensor:
+        """Symmetric 'no birth from vacuum': a site is forced dead iff every
+        *other* site is dead (its whole neighborhood is the dead token), so the
+        all-dead state is strictly absorbing."""
+        live = state != self.dead_token
+        others_live = int(live.sum().item()) - live.long()
+        return others_live == 0
 
     @torch.no_grad()
     def trajectory(
