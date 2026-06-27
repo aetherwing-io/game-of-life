@@ -176,6 +176,13 @@ python -m llm_life.run --arch local --window 3 single \
 python -m llm_life.run --arch local --window 3 single \
     --temp 0.2 --length 64 --steps 80 --absorbing \
     --seed-text " the quiet river at dawn" --dump-tokens      # prose seed
+
+# MLX-backed quantized models (Apple Silicon, via mlx_lm). --arch mlx is causal;
+# the forward runs on Metal and logits are bridged to torch. Lets you iterate a
+# native 2-bit checkpoint as a CA. (Needs `pip install mlx-lm`.)
+python -m llm_life.run --arch mlx --model prism-ml/Ternary-Bonsai-1.7B-mlx-2bit \
+    single --temp 0.0 --length 96 --steps 120 --seed-mode single \
+    --dump-tokens --animate
 ```
 
 ### Experiments worth running with more compute
@@ -208,8 +215,8 @@ where a true transition, if any, is most likely to appear.
 
 ```
 llm_life/
-  model.py         model loading + MPS/CUDA/CPU selection + dead-token detection
-  automaton.py     the synchronous LLM-CA map (soft + absorbing variants)
+  model.py         model loading (torch + MLX/mlx_lm) + device selection + dead-token detection
+  automaton.py     the synchronous LLM-CA map (causal / masked / local / mlx variants; soft + absorbing)
   sampler.py       Gumbel-max sampling with coupled (shared) noise
   metrics.py       activity, entropy, autocorr time, corr length, Lyapunov
   reference_ca.py  elementary CA baselines (known Wolfram classes)

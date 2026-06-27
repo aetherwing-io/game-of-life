@@ -47,6 +47,7 @@ def _build(args):
         model_name = "distilroberta-base" if args.model == "gpt2" else args.model
         model, tok, device = load_mlm(model_name, device)
         dead = dead_token_id_mlm(model, tok, device)
+        vocab = model.config.vocab_size
         common = dict(
             model=model, dead_token=dead, mask_token=tok.mask_token_id,
             cls_token=tok.cls_token_id, sep_token=tok.sep_token_id, device=device,
@@ -59,6 +60,16 @@ def _build(args):
             from .automaton import MaskedLMAutomaton
             auto = MaskedLMAutomaton(**common)
             extra = {"arch": "masked", "model": model_name}
+    elif arch == "mlx":
+        from .automaton import MLXLLMAutomaton
+        from .model import load_mlx, mlx_vocab_and_dead
+
+        model, tok = load_mlx(args.model)
+        device = "cpu"  # torch-side tensors live on CPU; MLX runs the forward on Metal
+        bos = tok.bos_token_id if tok.bos_token_id is not None else tok.eos_token_id
+        vocab, dead = mlx_vocab_and_dead(model, bos)
+        auto = MLXLLMAutomaton(model, dead_token=dead, bos_token=bos, device=device)
+        extra = {"arch": "mlx", "model": args.model}
     else:
         from .automaton import LLMAutomaton
         from .model import dead_token_id, load
@@ -66,12 +77,13 @@ def _build(args):
         model, tok, device = load(args.model, device)
         bos = tok.bos_token_id if tok.bos_token_id is not None else tok.eos_token_id
         dead = dead_token_id(model, tok, bos, device)
+        vocab = model.config.vocab_size
         auto = LLMAutomaton(model, dead_token=dead, bos_token=bos, device=device)
         extra = {"arch": "causal", "model": args.model}
 
     info = {
         "device": device,
-        "vocab": model.config.vocab_size,
+        "vocab": vocab,
         "dead_token": dead,
         "dead_token_str": repr(tok.decode([dead])),
         **extra,
@@ -182,9 +194,21 @@ def cmd_single(args):
                 f.write(f"g{t:>4} | " + " ".join(c[:8] for c in cells) + "\n")
         print(f"[wrote] {txt_path}")
 
-    # space-time diagram
-    emb = model.get_input_embeddings().weight.detach().to("cpu").float().numpy()
-    rgb = embedding_rgb_table(emb)
+    # space-time diagram. Colour tokens by embedding-PCA so similar tokens share
+    # a colour and structure shows. MLX models have no torch get_input_embeddings,
+    # so pull their (dequantized) embeddings via mlx; fall back to a hash table if
+    # that backend layout is unexpected.
+    if info["arch"] == "mlx":
+        try:
+            from .model import mlx_input_embeddings
+            rgb = embedding_rgb_table(mlx_input_embeddings(model, info["vocab"]))
+        except Exception as e:
+            from .viz import hash_rgb_table
+            print(f"[warn] mlx embedding extraction failed ({e}); using hash colours")
+            rgb = hash_rgb_table(info["vocab"])
+    else:
+        emb = model.get_input_embeddings().weight.detach().to("cpu").float().numpy()
+        rgb = embedding_rgb_table(emb)
     title = (f"{info['model']} ({info['arch']})  T={args.temp}  L={args.length}  "
              f"{'absorbing' if args.absorbing else 'soft'}")
     png = os.path.join(args.out, f"spacetime_{tag}.png")
@@ -483,8 +507,9 @@ def main():
     p = argparse.ArgumentParser(description="LLM-as-cellular-automaton experiments")
     p.add_argument("--model", default="gpt2",
                    help="model name; default gpt2 (causal) or distilroberta-base (masked)")
-    p.add_argument("--arch", default="causal", choices=["causal", "masked", "local"],
-                   help="causal (leftward) | masked (bidirectional global) | local (windowed ring)")
+    p.add_argument("--arch", default="causal", choices=["causal", "masked", "local", "mlx"],
+                   help="causal (leftward) | masked (bidirectional global) | local (windowed ring) "
+                        "| mlx (causal, MLX-backed quantized model)")
     p.add_argument("--window", type=int, default=4,
                    help="neighborhood radius w for --arch local (window = 2w+1)")
     p.add_argument("--device", default="auto", help="auto|mps|cuda|cpu")

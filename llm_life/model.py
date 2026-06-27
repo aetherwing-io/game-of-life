@@ -63,3 +63,40 @@ def dead_token_id(model, tokenizer, bos_token: int, device: str) -> int:
         inp = torch.tensor([[bos_token]], device=device)
         logits = model(inp).logits[0, -1]
         return int(logits.argmax().item())
+
+
+# --------------------------------------------------------------------------- #
+# MLX backend (Apple-Silicon-native quantized models via mlx_lm)
+# --------------------------------------------------------------------------- #
+# mlx_lm models run on Metal through Apple's MLX framework, not torch. We load
+# them here and bridge their logits back to torch at the automaton boundary
+# (see MLXLLMAutomaton), so the rest of the torch-based harness -- sampling,
+# coupled noise, metrics -- is unchanged. This lets us iterate genuinely
+# low-bit (e.g. 2-bit ternary) checkpoints as cellular automata.
+def load_mlx(model_name: str):
+    """Load an MLX-quantized causal LM via mlx_lm. Returns (model, tokenizer)."""
+    from mlx_lm import load
+
+    return load(model_name)
+
+
+def mlx_vocab_and_dead(model, bos_token: int) -> tuple[int, int]:
+    """One BOS-only forward gives both the vocab size and the dead/ground-state
+    token (argmax from BOS), the MLX analogue of dead_token_id()."""
+    import mlx.core as mx
+
+    out = model(mx.array([[bos_token]]))[0, -1]
+    mx.eval(out)
+    return int(out.shape[-1]), int(mx.argmax(out).item())
+
+
+def mlx_input_embeddings(model, vocab: int):
+    """(V, d) dense input embeddings from an mlx_lm model as float32 numpy, for
+    the embedding-PCA colour table. Calling the (possibly quantized) embedding
+    layer on every id dequantizes on the fly, so this works for 2-bit models."""
+    import mlx.core as mx
+    import numpy as np
+
+    emb = model.model.embed_tokens(mx.arange(vocab))  # (V, d), dequantized
+    mx.eval(emb)
+    return np.array(emb, copy=False).astype(np.float32)

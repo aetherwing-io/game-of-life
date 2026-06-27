@@ -29,6 +29,15 @@ def embedding_rgb_table(embedding_matrix: np.ndarray) -> np.ndarray:
     return (proj - lo) / rng
 
 
+def hash_rgb_table(vocab_size: int) -> np.ndarray:
+    """Deterministic pseudo-random (V, 3) RGB table -- a fallback colouring for
+    when input embeddings can't be extracted (e.g. an exotic quantized backend).
+    Less informative than the embedding-PCA table (similar tokens won't share a
+    colour), but it still renders the space-time structure."""
+    rng = np.random.default_rng(0)
+    return rng.random((vocab_size, 3))
+
+
 def spacetime_image(states: np.ndarray, rgb_table: np.ndarray) -> np.ndarray:
     """(T+1, L) ids + (V,3) table -> (T+1, L, 3) image array in [0,1]."""
     return rgb_table[states]

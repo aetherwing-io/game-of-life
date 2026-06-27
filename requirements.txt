@@ -7,3 +7,7 @@ pillow>=10.0        # animated-GIF writer
 
 # The `reference` subcommand (known-class CA baselines) needs only numpy +
 # matplotlib + pillow — torch/transformers are required only for the LLM runs.
+
+# Optional: only for `--arch mlx` (Apple-Silicon-native quantized checkpoints,
+# e.g. 2-bit ternary). Not needed for any torch/transformers run.
+# mlx-lm>=0.31      # Apple Silicon only

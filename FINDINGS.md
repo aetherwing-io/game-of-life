@@ -429,6 +429,202 @@ overwrites with the model's training-genre reflex. Meaning is not a conserved
 quantity; the only thing it reliably keeps is `the`, and the only thing it
 "prefers," given memory, is *no*.
 
+## 16. Recurrent / state-space models (RWKV-4, Mamba): architecture gives finite-*effective*-range propagation, but not lifeforms
+
+`results/spacetime_causal_{rwkv-4-169m-pile,mamba-130m-hf}_*.png`,
+`tokens_causal_*`, `single_causal_*`. RWKV-4-169m-pile and Mamba-130m-hf run as
+drop-in `--arch causal` models. This tests §11 next-step #1: the hypothesis that
+a recurrent/SSM model's *decaying* memory gives an effectively-local, finite-speed
+neighbourhood that full attention lacks — and might therefore support gliders.
+Single live cell on a dead background, L=96, T ∈ {0, 0.3}.
+
+**"Finite signal speed," stated honestly.** In the synchronous-CA setting one
+generation is a single parallel forward pass, and a causal SSM still ingests its
+*entire* left context in that pass (the recurrent state summarises sites 0..k-1).
+So there is no per-generation finite signal speed in general — same as full
+attention. What an SSM/RNN *does* add is a strong **recency bias** (RWKV's
+time-mixing decays exponentially), making the effective leftward neighbourhood
+short-range. The question is whether that *effective* locality changes anything.
+
+**A. Absorbing + single cell → a drifting front, then vacuum.** All four runs
+end in the all-`Q` absorbing state. But the route there is a propagating front,
+not a collapse in place:
+
+| run | behaviour | final |
+|---|---|---|
+| RWKV  T=0.0 | one live (whitespace) cell drifts right at **+1 site/gen**, runs off the boundary at g49 | dead g49 |
+| RWKV  T=0.3 | brief spread to ~5 cells, drifts right, dies | dead g8 |
+| Mamba T=0.0 | single-cell drifter at +1 site/gen, dies spontaneously | dead g7 |
+| Mamba T=0.3 | no propagation | dead g2 |
+
+The RWKV T=0 space-time diagram is a single clean diagonal at slope +1 — a
+ballistic drifter — on an otherwise dead lattice. **Dead token = `'Q'`** (token
+50, argmax from BOS) for *both* models (shared NeoX/Pile tokenizer) — a third
+distinct ground state alongside GPT-2's `\n` and distilroberta's `Advertisements`.
+
+*The drift is mostly the rule, not the model.* Under the absorbing causal rule
+the vacuum mask forces the leftmost live cell dead every generation while leaving
+sites to its right free to sample, so the live frontier can only march right at
+the +1/gen "light cone." The model's only job is to decide whether to populate
+the new frontier site with a live token (front advances) or the dead token (front
+collapses). The recency-biased SSMs keep emitting a whitespace token at the
+frontier, so the front advances; GPT-2's absorbing runs (§2) instead drain. This
+is a degenerate, content-free echo of the §12 windowed-ring propagation — reached
+via architecture rather than an explicit mask — and it leaves pure vacuum behind,
+not a structure.
+
+**B. Soft (non-absorbing) + single cell → the absorbing rule was doing the
+killing.** Remove the vacuum mask and the picture inverts. RWKV at T=0 from the
+*same* single cell does **not** collapse — it nucleates and fills the lattice to
+a stable fixed point with real structure:
+
+| metric | RWKV soft T=0 | GPT-2 soft T=0 (§3) |
+|---|---|---|
+| activity ρ | 0.27 | 0.027 |
+| entropy (bits) | 4.25 | — |
+| ξ | 11 | ~10 |
+| τ_int | 14.6 | ~12 |
+| final live density | 0.99 | — |
+
+And the fixed point is a **coherent, grammatical English sentence** — a Pile
+code-Q&A still-life, *"How to get the value of a variable in a function? … I have
+a function that takes a variable and returns the value of that variable …"* —
+identical from **g60 through g120** (a frozen fixed point; the ρ=0.27 is the
+nucleation transient). It is markedly more "alive" than GPT-2's soft-T=0 state,
+which has the same ξ but ~10× lower activity and is whitespace-dominated. It is
+tempting to credit recurrence for growing a *globally self-consistent sentence*
+where GPT-2 grows whitespace — but §17 shows a *full-attention* Bonsai-1.7B fills
+to a coherent still-life too, so the fill-vs-freeze split tracks **capability/scale,
+not attention topology**; a matched full-precision control is the clean test. As in
+§12/§13/§15, the stable structure is a training-data fingerprint: it is built from
+the model's own most mutually-predictive tokens.
+
+**Conclusion: the SSM hypothesis is partly right and mostly wrong.** *Right:*
+architecture alone (recency bias) does change the dynamics — it produces a
+propagating front under the absorbing rule and a coherent-sentence still-life
+under the soft rule, neither of which GPT-2 produces. *Wrong:* none of this is a
+localized lifeform. The absorbing "drifter" is a frontier artifact carrying a
+single whitespace token; the soft fixed point is a **global** still-life (the
+whole lattice is one sentence), not a localized, translating, interacting
+structure. As in §14 the missing ingredient is not architecture but Conway's
+fine-tuned *local birth/death balance*: a causal SSM gives finite *effective*
+range but no rule that lets a bounded droplet sit stably between growth and
+death. The genuine locality win remains the explicit windowed-ring rule (§12).
+
+*Caveats:* single seeds, single-cell, T ∈ {0, 0.3} only; the absorbing "drift" is
+substantially a property of the absorbing rule (confirmed by the soft control,
+which fills instead). A matched full-attention NeoX-tokenizer control
+(pythia-160m absorbing + single-cell at T=0) is the clean architecture-isolating
+experiment to add — it was not run here because the cached pythia weights were
+incomplete; the GPT-2 comparison (§2/§3, different tokenizer) stands in for it.
+
+## 17. Ternary (2-bit-trained) weights: extreme quantization is dynamically transparent
+
+`results/spacetime_causal_Ternary-Bonsai-1.7B-unpacked_*`,
+`tokens_causal_Ternary-Bonsai-1.7B-unpacked_*`,
+`damage_causal_Ternary-Bonsai-1.7B-unpacked_*`. prism-ml's **Ternary-Bonsai-1.7B**
+— a Qwen3-1.7B-architecture model trained to *ternary* weights {−1, 0, +1}, here
+in the "unpacked" checkpoint (ternary values materialised to standard tensors) so
+it loads as a plain `Qwen3ForCausalLM`. Question: does crushing the weights to
+ternary change the iterated-map *dynamics*, or only the attractor's token content?
+`--arch causal`, L=96.
+
+**The full CA repertoire is intact, cleanly:**
+
+| run | ρ | entropy | τ_int | ξ | outcome |
+|---|---|---|---|---|---|
+| absorbing, single cell, T=0 | 0.014 | 0.30 | 10.6 | 2 | +1/gen frontier drift → vacuum |
+| soft, single cell, T=0 | 0.21 | 4.42 | 14.5 | 10 | coherent still-life (filled) |
+| soft, random, T=0.3 | 0.44 | 2.14 | 5.9 | 5 | active, partially-ordered |
+| damage, soft, T=0.6 | — | — | — | — | λ_short=+0.75, heals to 0/96 |
+
+- **Absorbing single cell → the same +1/gen frontier drifter as RWKV/Mamba (§16),
+  then vacuum.** Because Bonsai is *full-attention* (Qwen3), this independently
+  confirms the §16 drift is a property of the **absorbing rule**, not recurrence.
+- **Soft single cell → a coherent still-life.** The single cell nucleates and
+  freezes (g80→g120) into a grammatical *Chinese* factual sentence — *"1990年，
+  中国在联合国大会上投票通过了《联合国公约》… 公约的签署标志着中国正式进入国际法
+  体系。"* (repeating). The dynamical signature (ρ=0.21, ξ=10, τ_int=14.5, live=0.99)
+  is nearly identical to RWKV-soft (§16); only the genre differs — a Qwen
+  training fingerprint (Chinese encyclopedic text), echoing the §13 identity probe
+  where Qwen base collapsed to Chinese exam boilerplate. Ternary did **not** blunt
+  the attractor: the model still falls into a coherent, self-consistent fixed point.
+- **Damage (coupled noise), T=0.6 → amplify-then-synchronize.** Positive short-time
+  conditional exponent (+0.75 — real local instability) but the Hamming distance
+  heals to **0/96**: the §4 common-noise-induced synchronization, reproduced. The
+  high-T "chaos" is faithful transcription of the injected noise, not a strange
+  attractor — as for every causal full-attention model tested.
+- **Dead token = `':'`** (token 25, argmax from BOS) — a fifth distinct ground
+  state (GPT-2 `\n`, distilroberta `Advertisements`, RWKV/Mamba `Q`, Bonsai `:`).
+
+**Two cross-cutting conclusions:**
+
+1. **Ternary quantization is dynamically transparent.** A ternary-weight model
+   shows the same phases (vacuum collapse, fill-to-still-life, common-noise
+   synchronization) with the same quantitative signatures as full-precision causal
+   models. Whatever determines the iterated map's behaviour is robust to crushing
+   the weights to {−1, 0, +1}; only the *genre* of the attractor tokens (a function
+   of the training mix) changes, not the dynamics.
+2. **Fill-vs-freeze is not about attention topology.** GPT-2 (124M, full attention)
+   *freezes* to whitespace under soft T=0 (§3); RWKV-169m (recurrent) **and**
+   Bonsai-1.7B (full attention) both *fill* to a coherent-sentence still-life. So
+   the soft-T=0 fill is not a recurrence effect — it tracks model
+   capability/scale. (§16 tentatively attributed it to recurrence; this corrects
+   that.) The clean isolation is the pending full-precision Qwen3-1.7B control
+   (does a same-arch, same-scale, *non*-ternary model fill identically?) plus a
+   larger GPT-2.
+
+*Caveats:* single seeds; the "unpacked" checkpoint stores ternary values in fp16,
+so this measures the *trained-ternary network's* dynamics, not behaviour under
+live 2-bit packed kernels — the native mlx-2bit variant is the test of whether the
+runtime packing itself perturbs anything (§18 — it doesn't).
+
+## 18. Native 2-bit packing is dynamically faithful — the checkpoint, not the precision, sets the attractor
+
+`results/spacetime_mlx_*`, `tokens_mlx_*`, `damage_mlx_*`. A new MLX backend
+(`--arch mlx`, via `mlx_lm`) iterates genuinely low-bit checkpoints on Metal: the
+forward runs in MLX and the logits are bridged back to torch at the automaton
+boundary, so the map / Gumbel sampling / coupled noise / metrics are reused
+unchanged. We compare prism-ml's Ternary-Bonsai in its **native 2-bit MLX
+packing** against the same model **unpacked to fp16** (§17), at two sizes.
+
+**Result 1 — 2-bit packing reproduces fp16 dynamics exactly.** 1.7B-mlx-2bit vs
+1.7B-unpacked, identical settings:
+
+| run | 1.7B-mlx-2bit | 1.7B-unpacked (§17) |
+|---|---|---|
+| abs single T=0 | ρ=0.0143, H=0.3005, τ=10.58, ξ=2 → vacuum | ρ=0.0143, H=0.3005, τ=10.58, ξ=2 → vacuum |
+| soft single T=0 | ρ=0.206, H=4.417, τ=14.7, ξ=10 | ρ=0.207, H=4.417, τ=14.5, ξ=10 |
+| soft fill content | *identical Chinese sentence* | *1990年…国际法体系* |
+| damage soft T=0.6 | λ_short=**+0.747**, heals to 0/96 | λ_short=**+0.745**, heals to 0/96 |
+
+The two are the same down to fp-noise, in the ordered (still-life) *and* chaotic
+(synchronization) regimes. So §17's "extreme quantization is dynamically
+transparent" now holds at the level of the actual packed 2-bit kernels, not just
+materialised ternary weights — the runtime quantization perturbs nothing
+measurable. (It is, after all, the same trained network; this confirms the MLX
+path and the packing introduce no dynamical artifact.)
+
+**Result 2 — the checkpoint, not the bits, drives the attractor.** The 8B-mlx-2bit
+soft single-cell run *also* fills (live 0.99) but into a **degenerate near-uniform
+field of `0`** (ρ=0.04, entropy **0.34 bits**, ξ=2) — not a coherent sentence.
+Same 2-bit packing as the faithful 1.7B, so this is the *checkpoint*: the 8B's
+basin is the code/zeros field §13 found in instruct/agent-weighted models, where
+the 1.7B base falls into a Chinese-factual sentence. (Whether the 8B Bonsai is
+instruct-tuned or merely code-weighted is unverified; the basin shape matches
+§13's instruct models.) Dead tokens differ too: 1.7B `':'`, 8B `' '` (space).
+
+**Conclusion.** Across full-precision (GPT-2, Qwen), recurrent (RWKV, Mamba),
+ternary-in-fp16 (§17), and native 2-bit (here), the iterated-map *dynamics* —
+the phases, the metric signatures, the common-noise synchronization — are robust
+to architecture and to numeric precision. What changes is the attractor's
+*content*: the genre of its tokens and the richness of its fixed point, which
+track the training mix and post-training, not the bit-width. For this whole study
+quantization is a red herring; the checkpoint's training is everything.
+
+*Caveats:* single seeds; the MLX bridge runs the torch side on CPU (fine — the
+forward dominates); the 8B was characterised on the single-cell runs only.
+
 ## 11. Next steps
 
 1. **Local-neighborhood rule (the headline follow-up).** Restrict each site to
@@ -436,6 +632,11 @@ quantity; the only thing it reliably keeps is `the`, and the only thing it
    model, a sliding-window-attention model (e.g. Mistral SWA), or a
    state-space/recurrent model (Mamba). Finite signal speed is the precondition
    for gliders; this is the experiment most likely to finally produce one.
+   *(Windowed-ring done — see §12. State-space/recurrent done — see §16: RWKV-4
+   and Mamba give finite* effective *range (a propagating absorbing front; a
+   coherent-sentence still-life under the soft rule) but no localized lifeform,
+   because a causal SSM ingests its whole left context in one synchronous pass —
+   only the explicit ±w window of §12 imposes true per-generation locality.)*
 2. **Local frequency penalty** — make the balance knob *local* (penalize by
    neighborhood composition, not whole-grid counts), the natural pairing with #1.
    *(Done — see §14: opens a sparse regime, but the (L × window × penalty) map

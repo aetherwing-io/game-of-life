@@ -205,6 +205,30 @@ class LLMAutomaton(BaseAutomaton):
         return vacuum
 
 
+class MLXLLMAutomaton(LLMAutomaton):
+    """Causal variant backed by an MLX (mlx_lm) model instead of a torch one.
+
+    The map is identical to LLMAutomaton -- each site regenerated from its entire
+    left context, BOS prepended -- but the forward pass runs in MLX on Metal. We
+    convert the input ids to an mlx array, run the model, and bridge the logits
+    back to a torch tensor so all the downstream machinery (Gumbel sampling,
+    coupled noise, absorbing mask, metrics) is reused verbatim. The torch side
+    lives on CPU; only the heavy forward runs on the GPU via MLX's unified memory.
+    """
+
+    @torch.no_grad()
+    def logits(self, state: torch.Tensor) -> torch.Tensor:
+        import mlx.core as mx
+        import numpy as np
+
+        L = state.shape[0]
+        ids = [self.bos_token] + state.detach().to("cpu").tolist()
+        out = self.model(mx.array([ids]))[0]   # (L+1, V) mlx
+        mx.eval(out)
+        arr = np.array(out, copy=False).astype(np.float32)[:L]  # predictions for 0..L-1
+        return torch.from_numpy(arr).to(self.device)
+
+
 class MaskedLMAutomaton(BaseAutomaton):
     """Masked-LM variant: the faithful Conway-like rule. Every site is
     recomputed *simultaneously* from the rest of the sequence. To get a
