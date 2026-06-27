@@ -22,5 +22,20 @@ results/*.csv
 !results/sweep_raw_*.csv
 !results/sweep2d_raw_*.csv
 !results/seed_*.csv
+!results/consistency_*.csv
+!results/endpoint_summary_*.csv
+!results/null_probe_*.csv
+!results/structure_probe_*.csv
+!results/structure_probe_*.json
+!results/structure_probe_*.npz
+!results/pairdamage_*.csv
+!results/pairdamage_*.png
+!results/pairdamage_*.gif
+!results/fate_map_*.csv
+!results/fate_map_*.png
+# keep the validated complexity-diagnostic figures + claim-backing CSV (FINDINGS §24)
+!results/complexity_plane.png
+!results/complexity_plane.csv
+!results/glider_filter_localTE.png
 # keep decoded token grids
 !results/tokens_*.txt

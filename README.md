@@ -60,8 +60,9 @@ Two update modes (`--absorbing` flag):
   *crossover*, not a sharp transition.
 * **absorbing** — *no spontaneous birth from vacuum*: a site whose entire left
   context is the dead token is forced dead; every other site samples at `T`.
-  This makes all-dead a true absorbing state, giving a genuine
-  directed-percolation-style **phase transition** with a real critical point.
+  This makes all-dead a true absorbing state, giving a DP-style absorbing-state
+  onset. Treat it as DP-style, not established directed-percolation universality,
+  until finite-size exponents are measured.
 
 The **dead token** is the model's own ground state — the argmax prediction from
 BOS alone — not an arbitrary PAD/space choice.
@@ -73,9 +74,11 @@ BOS alone — not an arbitrary PAD/space choice.
 | **activity** `ρ(t)` | fraction of sites that changed since last gen — freezing |
 | **live density** | fraction of non-dead sites — the absorbing order parameter |
 | **token entropy** `H(t)` | collapse (→0) vs. chaos (→max) |
-| **integrated autocorr time** `τ_int` | **critical slowing down** — peaks at the edge |
-| **spatial correlation length** `ξ` | spatial order — diverges at criticality |
-| **Lyapunov / damage spreading** `λ` | the sharpest edge detector (see below) |
+| **integrated autocorr time** `τ_int` | global-activity memory; descriptive here, not a class detector |
+| **spatial correlation length** `ξ` | change-field spatial scale; descriptive here, not a glider detector |
+| **Lyapunov / damage spreading** `λ` | perturbation growth/healing under shared noise |
+| **excess entropy** `E` + **entropy rate** `h_μ` | the *validated* Class-4 discriminator (`complexity.py`, FINDINGS §24): the (`h_μ`, `E`) plane separates Wolfram class on the reference CAs where `τ_int`/`ξ` fail |
+| **local transfer entropy** | spatially-resolved information transport — a glider filter (lights up rule-110's gliders; FINDINGS §24) |
 
 **Damage spreading** is the key one. Run two replicas that differ in a single
 token but are driven by the *identical* noise realization (coupled noise via the
@@ -133,7 +136,7 @@ also need `torch`/`transformers`.
 ## Usage
 
 ```bash
-# Known-class CA baselines (no model needed) — validates the metrics + viz
+# Known-class CA baselines (no model needed) — validates the visual renderer
 python -m llm_life.run --out results reference --rules 110 30 90 250 --animate
 
 # One LLM trajectory -> space-time diagram (+ optional GIF). Auto-selects MPS.
@@ -209,9 +212,10 @@ python -m llm_life.run --arch mlx --model prism-ml/Ternary-Bonsai-1.7B-mlx-2bit 
 
 GPT-2's geometry may have **no Class-4 band at all** — it might jump straight from
 frozen to static as `T` rises. That is a real, reportable result, not a failure.
-The harness is built to *detect whether* the edge exists (via the `τ_int`/`ξ`
-peaks and the `λ` damage curve), not to assume it does. The absorbing variant is
-where a true transition, if any, is most likely to appear.
+The harness is built to *detect whether* the edge exists (via space-time
+structure, damage curves, and better correlation/MI diagnostics), not to assume
+it does. `τ_int`/`ξ` are reported descriptively, not as edge detectors. The
+absorbing variant is where a true transition, if any, is most likely to appear.
 
 ## Layout
 
@@ -221,6 +225,8 @@ llm_life/
   automaton.py     the synchronous LLM-CA map (causal / masked / local / mlx variants; soft + absorbing)
   sampler.py       Gumbel-max sampling with coupled (shared) noise
   metrics.py       activity, entropy, autocorr time, corr length, Lyapunov
+  complexity.py    excess entropy + entropy rate + local transfer entropy — the
+                   VALIDATED Class-4 diagnostics (FINDINGS §24); τ_int/ξ are not
   reference_ca.py  elementary CA baselines (known Wolfram classes)
   viz.py           embedding-PCA space-time diagrams + animated GIFs
   run.py           CLI: single / reference / sweep / damage

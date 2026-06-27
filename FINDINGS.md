@@ -4,9 +4,10 @@ Experimental results for the question *"if you loop LLM inference — feed a
 token sequence in, take the output, feed it back — what kind of dynamical
 system do you get, and does it sit at the edge of chaos?"*
 
-**Model:** GPT-2 (124M, base) for §1–15; §16–19 add RWKV/Mamba, ternary Bonsai,
-MLX 2-bit, and pythia/Qwen3-Base controls. **Lattice:** `L=128` (`L=48–96` for
-the newer variants). **Seeds:** 3 in the sweeps; **n=1 in most of §16–19**.
+**Model:** GPT-2 (124M, base) for §1–15; §16–23 add RWKV/Mamba, ternary Bonsai,
+MLX 2-bit, pythia/Qwen3-Base controls, gemma-4-12B, and the common-noise fate-map
+work. **Lattice:** `L=128` (`L=48–96` for the newer variants). **Seeds:** 3 in
+the sweeps; **n=1 in most of §16–19**, with multi-pair damage runs in §23.
 **Hardware:** CPU / Apple MPS. Raw numbers in `results/*.csv`; figures in
 `results/`.
 
@@ -14,10 +15,11 @@ the newer variants). **Seeds:** 3 in the sweeps; **n=1 in most of §16–19**.
 > params**, where small models are known to degenerate more readily (e.g. arXiv
 > 2509.26643 finds a minimum scale for stable token distributions) — so read the
 > bulk of the headline as *"for small base models under this synchronous map."*
-> The one large data point, **gemma-4-12B (§22), shows the same ξ=1 / no-edge
-> behaviour**, so the negative now extends to 12B; but a systematic scale sweep is
-> still missing. The §16–19 single-run τ_int/ξ magnitudes are transient, not
-> steady-state (§1, §20).
+> The one large data point, **gemma-4-12B (§22), shows the same no-Class-4
+> visual/damage behavior** (with ξ=1 only a descriptive spatial-scale readout), so
+> the negative now extends to 12B; but a systematic scale sweep is still missing.
+> The §16–19 single-run τ_int/ξ magnitudes are transient, not steady-state (§1,
+> §20).
 
 ## TL;DR
 
@@ -25,7 +27,12 @@ the newer variants). **Seeds:** 3 in the sweeps; **n=1 in most of §16–19**.
 edge-of-chaos regime — not under temperature, not under a global balance knob,
 not with a bidirectional rule.** The missing ingredient is *locality*: full
 attention mixes information globally every step, so no localized structure can
-persist (`ξ` pinned at its floor everywhere; sections 1–10).
+persist (`ξ` pinned at its floor everywhere; sections 1–10). **This negative is
+now on a *validated* instrument (§24):** a complexity-entropy plane (excess
+entropy `E` vs entropy rate `h_μ`) that separates Wolfram class on the reference
+CAs — where `τ_int`/`ξ` provably fail — places *every* LLM regime outside the
+Class-4 corner that rule 110 occupies (causal → chaos, masked → saturated fill,
+the sparse engineered "lifeforms" → the Class-2 standing-order region).
 
 **Restoring locality changes everything (section 12).** A windowed-ring rule
 (each site predicted from only its ±w neighbours) gives finite signal speed and
@@ -47,11 +54,12 @@ Under temperature control it does one of two things:
   a high-activity, spatially-structureless regime that intensifies monotonically
   into pure noise. No critical slowing down, no localized structures, no gliders.
 
-And a subtler result from damage spreading: the high-activity "chaos" is
-**not deterministic chaos**. Under shared noise the system *synchronizes* —
-perturbations amplify briefly then heal to zero. The apparent disorder is
-faithful transcription of the injected temperature noise, not sensitive
-dependence on initial conditions.
+And a subtler result from damage spreading: much of the high-activity "chaos" is
+**not deterministic chaos**. Under shared noise, causal maps often *synchronize*:
+perturbations amplify briefly then heal to zero. §23 shows the fuller map: global
+masked distilroberta preserves damage, causal pythia/Qwen coalesce, and the local
+distilroberta rule has a sharp window-dependent boundary (`w=1` coalesces, `w=2`
+is mixed, `w>=3` mostly does not).
 
 ## 1. The instruments, honestly (reference baseline) — the *visual* discriminates Wolfram class; τ_int and ξ do **not**
 
@@ -92,7 +100,7 @@ Consequence for everything below: **every τ_int/ξ magnitude (§3, §12, §16�
 descriptive of a transient, not a steady-state edge-of-chaos signature** — read it
 with the space-time image, never alone. Full audit in §20.
 
-## 2. Absorbing variant: an absorbing-state transition (`T_c ≈ 1.3`)
+## 2. Absorbing variant: a DP-style absorbing-state onset (`T_c ≈ 1.3`)
 
 > *Per §20: "directed-percolation transition" is downgraded to "DP-**style**
 > crossover" — an order parameter switching on is necessary but not sufficient for
@@ -103,7 +111,7 @@ with the space-time image, never alone. Full audit in §20.
 `results/sweep_phasediagram_absorbing.png`. With the "no spontaneous birth from
 vacuum" rule, the all-`\n` state is a true absorbing state. Activity, entropy,
 and spatial correlation length are **identically zero for T ≤ 1.2**, then switch
-on sharply at `T = 1.3–1.4` — a clean directed-percolation-style transition.
+on sharply at `T = 1.3–1.4` — a clean DP-style absorbing-state onset.
 But the active phase is weak (`ρ ≈ 0.01` even at `T=1.8`): the dead state
 dominates the entire tested range. The dead token is `\n`, GPT-2's argmax from
 BOS — its lowest-energy attractor from vacuum is structural whitespace.
@@ -126,9 +134,10 @@ slowing down). The metric was subsequently fixed to measure steady state.
 - **T ≳ 0.8 → 1.1:** ramps to full chaos (`ρ → 1.0`, entropy → ~7 bits ≈ the
   `log2(128)` ceiling).
 
-`τ_int` is **highest at the lowest temperature and decays monotonically to ~0**
-— the opposite of an edge-of-chaos peak. `ξ` sits at its floor of 1 across the
-whole active range. There is no critical point and no Class-4 band.
+`τ_int` is **highest at the lowest temperature and decays monotonically to ~0**;
+`ξ` sits at its floor of 1 across the whole active range. These are descriptive
+readouts, not edge detectors. There is no visual or damage-spreading evidence of
+a critical point or Class-4 band.
 
 Space-time textures confirm it visually: `T=0.5` (`spacetime_T0.5_*.png`) is
 whitespace-dominated with horizontal *temporal* streaks but no spatial
@@ -152,8 +161,8 @@ distance is **non-monotonic** at every temperature:
 A single flipped token **amplifies** explosively (short-time conditional
 Lyapunov exponent > 0 — there is real local instability), then under the shared
 noise the two replicas **re-converge to zero** within ~80 generations
-(**common-noise-induced synchronization**; negative *asymptotic* conditional
-Lyapunov exponent).
+(**common-noise-induced synchronization** over the measured horizon; do not read
+this alone as a measured asymptotic exponent).
 
 Interpretation: the deterministic skeleton of the map is locally expanding but
 globally contractive under common noise. The high entropy/activity of the
@@ -189,12 +198,17 @@ live at simply isn't there for this model under temperature control.
 - **Discrete argmax/sampling feedback** only; the continuous activation field is
   never fed back (by design — we iterate the observable token lattice).
 
-## 8. Masked-LM (bidirectional) variant
+## 8. Masked-LM (bidirectional) variant — one distilroberta pseudo-Gibbs test
 
 `results/sweep_phasediagram_masked_soft.png`, `spacetime_masked_T*.png`,
 `damage_masked_*.png`. distilroberta-base, `L=48`, symmetric neighborhood (each
 site recomputed from the rest via one batched masked forward pass). Dead token:
 `Advertisements` (the model's bare-`[MASK]` argmax).
+
+*Scope/provenance caveat:* this is one `distilroberta-base` checkpoint under an
+engineered synchronous pseudo-Gibbs update, not a native left-to-right generator.
+Tokens like `Advertisements` and `Related` are attractor/provenance clues from
+the model/tokenizer/training mixture, not audited source-document claims.
 
 Two qualitative differences from causal:
 
@@ -203,13 +217,14 @@ Two qualitative differences from causal:
   Bidirectional context is a stronger consensus: every site sees the whole
   (increasingly uniform) sequence and agrees on the ground state. The dead→chaos
   transition is sharper and higher (`T_c ≈ 1.2`) than causal's.
-- **High T: genuinely chaotic.** Damage spreading does **not** synchronize —
-  at `T = 1.0` a one-token perturbation fills the entire lattice (48/48) and
-  stays, vs causal's uniform healing to 0. Positive asymptotic conditional
-  Lyapunov exponent: real sensitive dependence, not noise-driven pseudo-chaos.
+- **High T: damage persists under common noise.** At `T = 1.0` a one-token
+  perturbation fills the entire lattice (48/48) and stays separated over the
+  measured horizon, vs causal's uniform healing to 0. This is real finite-horizon
+  sensitivity to initial condition under the same Gumbel field, not a
+  shared-noise tautology.
 
-> **Matched-L reproduction (added per the §20 review — this is the project's one
-> genuinely-novel result, so it gets a real control).** The original comparison
+> **Matched-L reproduction (added per the §20 review — the sign-split claim needed
+> a real control).** The original comparison
 > was masked `L=48` vs causal `L=128`, figures-only. Re-run at **matched `L=48`,
 > `T=1.0`, 12 coupled-noise pairs**, with committed CSVs
 > (`results/damage_{causal_pythia-160m,masked_distilroberta-base}_soft_T1.0_L48.csv`):
@@ -219,13 +234,14 @@ Two qualitative differences from causal:
 > | causal (pythia-160m, full-attn) | +0.50 | **0.0 / 48** | synchronizes |
 > | masked (distilroberta, bidirectional) | +0.17 | **47.2 / 48** | stays chaotic |
 >
-> The **architecture-dependent sign flip of the *asymptotic* conditional Lyapunov
-> exponent holds at matched L**: both architectures have a positive *short-time*
-> exponent (local instability), but only the causal map contracts back to
-> synchrony under common noise; the bidirectional map saturates.
+> The **architecture-dependent coalescence split holds at matched L**: both
+> architectures have a positive *short-time* exponent (local instability), but only
+> the causal map contracts back to synchrony under common noise over this horizon;
+> the bidirectional map saturates.
 >
 > **Temperature × scale sweep (`results/lam_sweep_T.csv`, L=48, 10 pairs/cell).**
-> The split is *not* a single-temperature accident — it is the whole phase plane:
+> The split is *not* a single-temperature accident; pythia covers the full sweep
+> and Qwen3 checks the midrange at larger scale:
 >
 > | model (arch) | final separation, T = 0.4 → 1.4 |
 > |---|---|
@@ -233,17 +249,24 @@ Two qualitative differences from causal:
 > | Qwen3-1.7B-Base (causal, 1.7B) | **0.0** at T=0.8/1.0/1.2 (always synchronizes) |
 > | distilroberta (masked, bidir) | **29 → 43 / 48 at every T** (never synchronizes) |
 >
-> So a **causal full-attention map is universally synchronizing** — across the full
-> temperature range *and* a 10× scale jump (160M→1.7B), it never reaches λ_cond>0
-> despite positive short-time exponents (0.5–1.0). The consistency breakdown is
-> driven by **bidirectional coupling, not temperature or scale**. This is the
-> sharpest form of the result: *full-attention causal LLM inference is a
-> consistent (echo-state) map; bidirectional coupling is what destroys
-> consistency.* (Honest caveats: the masked side is one model with high
-> pair-to-pair variance, std 14–23 — it is bimodal, most pairs saturate; the
-> causal side is clean, std 0. Still open: a second masked model, larger scale,
-> and the **±w windowed-ring** interpolation between causal-sync and masked-chaos,
-> plus a finite-size-scaling test of the transition for DP universality.)
+> So the tested **causal full-attention maps synchronize in every measured cell**:
+> pythia across `T=0.4–1.4`, and Qwen3 across `T=0.8/1.0/1.2` at 10× larger scale.
+> None fails to coalesce despite positive short-time exponents (0.5–1.0). The
+> consistency breakdown points to **bidirectional coupling**, but scale and
+> temperature are not exhaustively ruled out. This is the sharpest form of the
+> result: *full-attention causal LLM inference is a consistent (echo-state) map
+> in the tested regimes; bidirectional coupling is what destroys consistency.*
+> (Honest caveats: the masked side is one model with high pair-to-pair variance,
+> std 14–23 — it is bimodal, most pairs saturate; the causal side is clean, std
+> 0. Still open: a second masked model, larger scale, full Qwen3 temperature
+> coverage, and larger-`L` window×temperature maps, plus finite-size scaling before
+> any DP-universality claim.)
+
+> **Update after §23.** The windowed-ring interpolation is now partly run. The
+> binary causal-vs-masked story should be read as a slice through a broader
+> finite-horizon damage-fate map: `w=1` local distilroberta coalesces, `w=2` is
+> mixed, and `w>=3` usually preserves damage. The right next claim is about the
+> geometry of that fate map, not an asymptotic Lyapunov sign from one horizon.
 
 And the most structured texture in the whole study: the `T = 1.2` space-time
 diagram shows **localized, persistent activity clusters drifting on the
@@ -597,15 +620,16 @@ which fills instead). A matched full-attention NeoX-tokenizer control
 experiment to add — it was not run here because the cached pythia weights were
 incomplete; the GPT-2 comparison (§2/§3, different tokenizer) stands in for it.
 
-## 17. Ternary (2-bit-trained) weights: extreme quantization is dynamically transparent
+## 17. Ternary-trained weights preserve the same causal repertoire
 
 `results/spacetime_causal_Ternary-Bonsai-1.7B-unpacked_*`,
 `tokens_causal_Ternary-Bonsai-1.7B-unpacked_*`,
 `damage_causal_Ternary-Bonsai-1.7B-unpacked_*`. prism-ml's **Ternary-Bonsai-1.7B**
 — a Qwen3-1.7B-architecture model trained to *ternary* weights {−1, 0, +1}, here
 in the "unpacked" checkpoint (ternary values materialised to standard tensors) so
-it loads as a plain `Qwen3ForCausalLM`. Question: does crushing the weights to
-ternary change the iterated-map *dynamics*, or only the attractor's token content?
+it loads as a plain `Qwen3ForCausalLM`. Question: does this trained-ternary
+checkpoint change the iterated-map *dynamics*, or only the attractor's token
+content?
 `--arch causal`, L=96.
 
 **The full CA repertoire is intact, cleanly:**
@@ -638,12 +662,12 @@ ternary change the iterated-map *dynamics*, or only the attractor's token conten
 
 **Two cross-cutting conclusions:**
 
-1. **Ternary quantization is dynamically transparent.** A ternary-weight model
-   shows the same phases (vacuum collapse, fill-to-still-life, common-noise
-   synchronization) with the same quantitative signatures as full-precision causal
-   models. Whatever determines the iterated map's behaviour is robust to crushing
-   the weights to {−1, 0, +1}; only the *genre* of the attractor tokens (a function
-   of the training mix) changes, not the dynamics.
+1. **This trained-ternary checkpoint preserves the causal repertoire.** It shows
+   the same phases (vacuum collapse, fill-to-still-life, common-noise
+   synchronization) seen in full-precision causal controls. This does **not**
+   prove a generic 2-bit=f16 rule: Bonsai was trained in ternary form and has no
+   same-checkpoint full-precision twin; only the *genre* of the attractor tokens
+   is clearly tied to the training mix.
 2. **Fill-vs-freeze is checkpoint-specific** — not attention topology, and (per
    the §19 control) **not scale either.** GPT-2 (124M, full attention) *freezes*
    to whitespace under soft T=0 (§3); RWKV-169m and Bonsai-1.7B both *fill* to a
@@ -656,10 +680,10 @@ ternary change the iterated-map *dynamics*, or only the attractor's token conten
 
 *Caveats:* single seeds; the "unpacked" checkpoint stores ternary values in fp16,
 so this measures the *trained-ternary network's* dynamics, not behaviour under
-live 2-bit packed kernels — the native mlx-2bit variant is the test of whether the
-runtime packing itself perturbs anything (§18 — it doesn't).
+live 2-bit packed kernels and not a broad quantization claim. The native mlx-2bit
+variant only tests whether runtime packing perturbs this same checkpoint (§18).
 
-## 18. Native 2-bit packing is dynamically faithful — the checkpoint, not the precision, sets the attractor
+## 18. Native 2-bit MLX packing validates the same-checkpoint backend
 
 `results/spacetime_mlx_*`, `tokens_mlx_*`, `damage_mlx_*`. A new MLX backend
 (`--arch mlx`, via `mlx_lm`) iterates genuinely low-bit checkpoints on Metal: the
@@ -668,11 +692,12 @@ boundary, so the map / Gumbel sampling / coupled noise / metrics are reused
 unchanged. We compare prism-ml's Ternary-Bonsai in its **native 2-bit MLX
 packing** against the same model **unpacked to fp16** (§17), at two sizes.
 
-**Result 1 — 2-bit packing converges to the same attractor as fp16.** *(Framing
-corrected per §20: this is a near-tautology — the unpacked and mlx-2bit
-checkpoints are the **same trained ternary network** in two storage formats, so
-≈identical logits are expected, not discovered. It validates the MLX backend; it
-is not evidence about quantization in general. And it is not "exact": the
+**Result 1 — same-checkpoint 2-bit packing converges to the same attractor as
+fp16-unpacked.** *(Framing corrected per §20: this is a near-tautology — the
+unpacked and mlx-2bit checkpoints are the **same trained ternary network** in two
+storage formats, so ≈identical logits are expected, not discovered. It validates
+the MLX backend; it is not evidence about quantization in general. And it is not
+"exact": the
 **transients differ** (decoded grids diverge at several generations); only the
 **fixed point** matches.)* 1.7B-mlx-2bit vs 1.7B-unpacked, identical settings
 (τ/ξ shown are full-trajectory transients, ≈0 at steady state — see §1/§20):
@@ -703,12 +728,12 @@ instruct-tuned or merely code-weighted is unverified; the basin shape matches
 §13's instruct models.) Dead tokens differ too: 1.7B `':'`, 8B `' '` (space).
 
 **Conclusion.** Across full-precision (GPT-2, Qwen), recurrent (RWKV, Mamba),
-ternary-in-fp16 (§17), and native 2-bit (here), the iterated-map *dynamics* —
-the phases, the metric signatures, the common-noise synchronization — are robust
-to architecture and to numeric precision. What changes is the attractor's
-*content*: the genre of its tokens and the richness of its fixed point, which
-track the training mix and post-training, not the bit-width. For this whole study
-quantization is a red herring; the checkpoint's training is everything.
+trained-ternary-in-fp16 (§17), and same-checkpoint native 2-bit (here), the
+coarse iterated-map phases recur. The only direct 2-bit comparison here validates
+MLX packing/backend faithfulness for the same Bonsai checkpoint; it does not show
+that arbitrary 2-bit quantization matches full precision. What changes is the
+attractor's *content*: the genre of its tokens and the richness of its fixed
+point, which track the training mix and post-training.
 
 *Caveats:* single seeds; the MLX bridge runs the torch side on CPU (fine — the
 forward dominates); the 8B was characterised on the single-cell runs only.
@@ -753,15 +778,18 @@ alternation, the left half stays dead), where Bonsai-1.7B fills the whole lattic
 (live=0.99) with a coherent Chinese sentence. Same architecture, same scale,
 opposite fill. So the soft-T=0 attractor (freeze / partial-fill / full coherent
 fill) is a **per-checkpoint, training-dependent** property — it does not reduce to
-scale, attention topology, or precision.
+scale or attention topology. Precision remains unisolated by this cross-check
+because Bonsai and Qwen3-Base are different checkpoints.
 
 **What this does and does not say about ternary.** It does *not* make Bonsai's
 richer fill a ternary effect: Bonsai and Qwen3-1.7B-Base are *different checkpoints*
 (different ground states — Bonsai `:` vs Qwen3-Base `Human`), so this comparison
-cannot isolate quantization from training. The clean quantization test remains §18
-(the *same* Bonsai checkpoint at 2-bit vs fp16 — identical). Net: quantization
-*packing* is transparent (§18, same checkpoint), but the *attractor* is set by the
-checkpoint's training, and even same-arch/same-scale checkpoints differ sharply.
+cannot isolate quantization from training. §18 is same-checkpoint backend/packing
+validation, not the clean quantization test. The clean test remains: quantize a
+non-ternary model (e.g. Qwen3-Base) and compare it to its own full-precision
+checkpoint. Net: Bonsai packing is transparent for the same checkpoint, but the
+*attractor* is set by the checkpoint's training, and even same-arch/same-scale
+checkpoints differ sharply.
 
 **Ground-state catalogue** (argmax from BOS — a tokenizer/training fingerprint):
 GPT-2 `\n`, distilroberta `Advertisements`, pythia/RWKV/Mamba `Q` (Pile/NeoX),
@@ -777,10 +805,10 @@ attractor is checkpoint-specific.
 
 A three-reviewer panel (complexity-science, ML-literature, methodology lenses)
 audited §1–19 against the code and the literature, debated to convergence, and ran
-several of its own reproductions. Headline verdicts (no edge of chaos;
-checkpoint-not-bit-width; the §19 controls) **survive**; several quantitative and
-novelty claims were **corrected**. The fixes above (§1, §18, TL;DR scope) are
-already applied; this section records the rest.
+several of its own reproductions. Headline verdicts (no edge of chaos; §19
+checkpoint/training controls; same-checkpoint MLX backend validation) **survive**;
+several quantitative and novelty claims were **corrected**. The fixes above (§1,
+§18, TL;DR scope) are already applied; this section records the rest.
 
 **Verified bugs / overclaims (corrected):**
 
@@ -798,8 +826,8 @@ already applied; this section records the rest.
    echo-state/**consistency** property (Lymburn et al., *Chaos* 2019; Mainen–
    Sejnowski 1995; common-noise sync, Pikovsky/Toral); the *identical* shared-Gumbel
    mechanism is already published on LLM sampling (*Recycled Gumbel Noise*, NAACL
-   2025, arXiv 2503.00831). It is a **real** conditional-Lyapunov effect (not a
-   tautology — proof below), but bill it as a re-instance + diagnostic, not a
+   2025, arXiv 2503.00831). It is a **real** common-noise consistency effect (not
+   a tautology — proof below), but bill it as a re-instance + diagnostic, not a
    discovery.
 4. **"Directed-percolation transition" (§2) is unsupported** — no measured exponents
    (β, ν⊥, ν∥), n=3. Downgrade to "DP-style crossover" pending finite-size scaling.
@@ -825,50 +853,59 @@ already applied; this section records the rest.
    BOS-convention-dependent and partly circular with the absorbing rule (which is
    defined by force-killing to it); the catalogue is high-frequency structural
    tokens — a tokenizer/frequency fingerprint, not a deep semantic probe.
+8. **Masked-rule scope/provenance (§8).** The masked result is one
+   `distilroberta-base` checkpoint under an engineered synchronous pseudo-Gibbs
+   update. Its boilerplate tokens are attractor/provenance clues, not audited
+   source-document claims.
 
 **What the panel verified as SOLID (some strengthened):**
 
 - **§19 Control B is seed-robust** — multi-seed test (which the doc lacked):
   pythia/RWKV fill 0.990 across 8 seeds (std 0.000); Qwen3-1.7B-Base freezes to
   0.438 across 3 — so *fill-vs-freeze is checkpoint-specific, not architecture /
-  scale / precision*, the real quantization-era claim. The earlier n=1 worry is
-  resolved (the *attractor content* is near-deterministic; only the τ_int/ξ
-  *magnitudes* are fragile — two different reliabilities).
+  scale*. Precision still needs the non-ternary same-checkpoint quantization test.
+  The earlier n=1 worry is resolved (the *attractor content* is near-deterministic;
+  only the τ_int/ξ *magnitudes* are fragile — two different reliabilities).
 - §19 Control A (absorbing drift rule-universal), the SSM finite-*effective*-range
   caveat (§16), §15's frequency filter (Spearman ρ=0.285 reproduced), and the
   visual + damage + §12 locality evidence for the headline negative.
 
-**The synchronization billing (use this exact framing):** *"Temperature-sampling
-'chaos' in iterated LLM inference is the consistency/echo-state property — faithful
-transcription of injected noise — with an architecture-dependent breakdown:
-full-attention synchronizes (λ_cond<0), bidirectional does not (λ_cond>0)."* It is
-**not** a tautology: under the same shared noise, causal heals to 0 but masked
-**stays separated** (§8) — if shared noise forced sync, masked couldn't. And the
-causal soft-T=1.0 replicas sync while staying *high-activity* (ρ→1) — locking onto
-a common fluctuating orbit, not draining to a dead fixed point. Honest hedge:
-discreteness makes *low*-activity sync semi-trivial; the informative regime is the
-high-activity one.
+**Synchronization billing after §23:** *"Temperature-sampling 'chaos' in iterated
+LLM inference is often common-noise consistency — faithful transcription of
+injected noise — but coalescence depends on architecture, model, local window, and
+temperature."* It is **not** a tautology: under the same shared noise, causal heals
+to 0 but global masked distilroberta **stays separated** (§8, §23). If shared noise
+forced sync, masked/local non-coalescing cells could not exist. Honest hedge:
+current `p_sync` and `late_damage` are finite-horizon endpoint metrics, not
+measured asymptotic Lyapunov exponents.
 
-**The one genuinely novel, pursuable result — and it is under-powered.** The
-contributions that survive as new (vs the non-spatial iterated-inference work —
-Zhilin Wang et al., *Attractor Cycles in LLMs*, ACL 2025, arXiv 2502.15208; and vs
-LifeGPT npj 2025, which is the *inverse* problem) are: (i) the **spatially-extended
-synchronous-CA apparatus** with a tunable coupling neighborhood, and (ii) the
-**architecture-dependent λ_cond sign split** (§8). But §8 rests on a *single*
-masked run at L=48 vs causal L=128, figures-only (no committed CSV). **Before this
-is a headline it must be reproduced at matched L, multi-seed, with raw Hamming
-data.** (The masked rule's *iteration* is itself known — Gibbs sampling from a BERT
-MRF: Wang & Cho 2019 arXiv 1902.04094; Mask-Predict, Ghazvininejad 2019 arXiv
-1904.09324; only the CA-diagnostic framing is new.)
+**The live, pursuable result.** The contributions that survive as new (vs the
+non-spatial iterated-inference work — Zhilin Wang et al., *Attractor Cycles in
+LLMs*, ACL 2025, arXiv 2502.15208; and vs LifeGPT npj 2025, which is the *inverse*
+problem) are: (i) the **spatially-extended synchronous-CA apparatus** with a
+tunable coupling neighborhood, and (ii) the **common-noise damage-fate map** (§23).
+The old architecture sign split is still useful, but it is one slice through this
+map: causal pythia/Qwen coalesce in tested cells; global masked distilroberta does
+not; BERT/CodeBERTa and local `w=2` are mixed. The masked rule's *iteration* is
+itself known — Gibbs sampling from a BERT MRF: Wang & Cho 2019 arXiv 1902.04094;
+Mask-Predict, Ghazvininejad 2019 arXiv 1904.09324 — but the CA damage-map framing
+is the useful new apparatus here.
 
-**Prioritized firm-up list (panel consensus):**
-1. Reproduce the §8 causal-vs-masked λ_cond sign split at **matched L, multi-seed,
-   raw CSVs**; sweep (T, window w, **scale**) — does a causal model *ever* reach
-   λ_cond>0, or are causal models universally synchronizing? Test DP universality.
-2. Finite-size scaling of the absorbing T_c (vary L) to earn or drop the "DP" label.
-3. The non-tautological quantization test (Qwen3-Base 2-bit vs its fp32 self);
-   replace τ_int/ξ with a configurational two-point token correlation / spatial
-   mutual-information + the MI-peak-at-λ_c standard edge-of-chaos discriminator.
+**Prioritized firm-up list (updated after §23):**
+1. Scale the local window×temperature fate map in `L`, horizon, and pair count;
+   especially test the `w=2` boundary and the `w=2→3` wall.
+2. Add richer nulls: logit shuffle, random-initialized MLM/causal, and
+   temperature-matched marginal baselines.
+3. Add a second masked model, larger causal scales, and entropy-matched
+   temperatures so coalescence failure is mapped across model family, not inferred
+   from one masked checkpoint.
+4. Finite-size scaling of the absorbing T_c (vary `L`) to earn or drop the "DP"
+   label.
+5. The non-tautological quantization test (Qwen3-Base 2-bit vs its fp32 self);
+   ~~replace τ_int/ξ with configurational token correlation and spatial
+   mutual-information diagnostics~~ **— done in §24** (`complexity.py`: excess
+   entropy + entropy rate + configurational token MI + local transfer entropy,
+   validated on the reference CAs).
 
 *Process note:* findings cross-checked by three independent reviewers to
 convergence; the central bug (§1) and the §19 Control B robustness were reproduced
@@ -968,26 +1005,244 @@ ground state is a *modality* token — a compact readout of what the model expec
 from nothing. *Caveat:* single seeds; the text head drops the vision/audio towers,
 so this is gemma-4's text backbone, not the full multimodal model.
 
+## 23. Common-noise damage fate map: local window controls coalescence
+
+This session reframed the §8 "causal sync vs masked chaos" result as a
+finite-horizon **common-noise damage fate map**. Two replicas differ by one token
+at `g=0` and are then driven by the same Gumbel field. The endpoint metrics here
+are deliberately modest:
+
+- `p_sync`: fraction of pairs with sustained `H=0` over the final 10 generations.
+- `late_damage`: mean Hamming damage over the final 20% of the run. In the raw
+  consistency table below it is a count out of 48; in the fate-map tables it is
+  normalized to `[0, 1]`.
+
+**Artifacts.** Main scripts and outputs:
+`scripts_consistency_sweep.py` →
+`results/consistency_*_{sweep,pairs,hamming}.csv` and
+`results/endpoint_summary_all_current.csv`; `scripts_null_probe.py` →
+`results/null_probe_{aggregate,pairs,hamming}.csv`; `scripts_fate_map.py` →
+`results/fate_map_distilroberta_L48_w1-8_T06-14_p8_*` and
+`results/fate_map_distilroberta_L48_w2_T05-15_p16_*`;
+`scripts_structure_probe.py` →
+`results/structure_probe_distilroberta-base_T0_L64_s0_*`;
+`scripts_pair_damage_gif.py` → `results/pairdamage_*.gif/.png/.csv` and
+`results/pairdamage_contact.png`.
+
+**Raw consistency sweep (`L=48`, `T=1.0`).**
+
+| rule / model | pairs | `p_sync` | late H / 48 | final H / 48 | read |
+|---|---:|---:|---:|---:|---|
+| causal pythia-160m | 16 | 1.00 | 0.00 | 0.00 | all pairs coalesce |
+| causal Qwen3-1.7B-Base | 3 | 1.00 | 0.00 | 0.00 | scale sanity check, all coalesce |
+| masked distilroberta-base | 16 | 0.00 | 47.38 | 47.44 | damage saturates |
+| masked bert-base-uncased | 16 | 0.44 | 19.88 | 17.31 | mixed / bimodal |
+| masked CodeBERTa-small-v1 | 8 | 0.50 | 14.53 | 12.75 | mixed / bimodal |
+| local distilroberta `w=1` | 16 | 1.00 | 0.00 | 0.00 | all pairs coalesce |
+| local distilroberta `w=2` | 16 | 0.44 | 11.69 | 11.88 | boundary regime |
+| local distilroberta `w=4` | 16 | 0.12 | 41.68 | 41.81 | mostly non-coalescing |
+| local CodeBERTa `w=2` | 8 | 0.38 | 18.28 | 17.13 | mixed / bimodal |
+
+Temperature spot-checks reinforce the same split but weaken any universal
+"masked always chaotic" wording: pythia causal coalesced at `T=0.6` and `T=1.4`;
+global masked distilroberta was partial at `T=0.6` (`p_sync=0.25`) and
+non-coalescing at `T=1.4` (`p_sync=0`). BERT and CodeBERTa show that "masked" is
+not one behavior; pair-level fates are often bimodal.
+
+**Window × temperature map for local distilroberta (`L=48`, 80 steps, 8 pairs).**
+
+The local rule has a clean geometry:
+
+| local window | result across `T=0.6,0.8,1.0,1.2,1.4` |
+|---|---|
+| `w=1` | mostly coalescing: `p_sync=0.75` at `T=0.6`, then `1.00`; late damage ≈0 |
+| `w=2` | boundary: `p_sync=0.12,0.38,0.38,0.62,1.00`; late damage falls `0.55→0.00` |
+| `w=3` | mostly non-coalescing: `p_sync=0–0.12`; late damage `0.74–0.99` |
+| `w=4,6,8` | mostly non-coalescing: late damage usually `0.81–1.00`, rare healing outliers |
+
+The refined `w=2` scan (`L=48`, 100 steps, 16 pairs) is the most interesting
+slice. Increasing temperature **helps coalescence** instead of simply adding
+chaos:
+
+| `T` | 0.5 | 0.6 | 0.7 | 0.8 | 0.9 | 1.0 | 1.1 | 1.2 | 1.3 | 1.4 | 1.5 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `p_sync` | .12 | .19 | .25 | .25 | .31 | .44 | .62 | .69 | .88 | 1.00 | 1.00 |
+| `late_damage` | .49 | .52 | .46 | .46 | .36 | .25 | .13 | .10 | .03 | .00 | .00 |
+
+So the map is not a monotone "more temperature = more chaos" story. At `w=2`,
+low-to-mid temperature preserves damage; high temperature restores common-noise
+coalescence. The sharpest front in the current data is the `w=2→3` wall, not a
+temperature-only transition.
+
+**Null probes.** State-independent shared-noise nulls synchronize trivially:
+IID uniform fixed-logit and Bernoulli `p=0.5` sync after one step for all 16
+pairs; a simple absorbing-local Bernoulli radius-1 null also ends synchronized
+(`exact_sync_fraction=1.0`, mean sync step 1.375). This does not prove the trained
+model effect is deep, but it does rule out the weakest objection: shared noise
+alone does not force persistent damage.
+
+**Structure probe.** `scripts_structure_probe.py` tested local distilroberta
+with `T=0`, absorbing local ring, `L=64`, windows `1,2,4`, seed
+`" Comments Related Posts"`. No localized traveler survived. The seed filled the
+ring at generations 31, 24, and 17 for `w=1,2,4`; tail support was 62–64/64 for
+`w=1` and exactly 64/64 for `w=2,4`. The `w=4` tail is an exact period-2 standing
+oscillator with shift 0, velocity 0. This reinforces the glider result: the model
+can make resonant standing order, but not a free-moving object.
+
+**Animations.** The `pairdamage_*` GIFs are the best human-readable evidence:
+`pairdamage_causal_pythia_T1_L48_pair0.gif` blooms to 28/48 then heals to 0;
+`pairdamage_masked_distilroberta_T1_L48_pair0.gif` saturates at 48/48;
+`pairdamage_local_w1_distilroberta_T1_L48_pair0.gif` heals; `w=2` and `w=4` show
+mixed fates, including `w=4` pair 2 blooming to 40/48 before healing. The single
+trajectory `spacetime_*_T1.0_L48_s21.gif` files are useful texture references, but
+the pair-damage GIFs are the direct coalescence evidence.
+
+**Conclusion.** The central object is now the behavior map: coalescing,
+non-coalescing, and mixed finite-horizon basins as a function of architecture,
+model, window, temperature, and scale. The glider hunt is secondary. The next
+useful work is to sharpen the mixed regimes and determine whether the `w=2`
+boundary and the `w=2→3` wall survive larger `L`, longer horizons, and stronger
+nulls.
+
+## 24. A *validated* complexity diagnostic — every LLM regime placed on the (h_μ, E) plane
+
+`llm_life/complexity.py`, `scripts_complexity_plane.py`,
+`results/complexity_plane.{csv,png}`; `scripts_glider_filter.py`,
+`results/glider_filter_localTE.png`. The §1/§20 audit established that the repo's
+two structural metrics, `τ_int` and `ξ`, do **not** discriminate Wolfram class
+(rule-110 reads `τ_int=0.47`, *below* chaotic rule-30's 1.39; `ξ=1` for 110/30/90
+alike). The entire "no edge of chaos" verdict therefore rested on the space-time
+**visual** + damage spreading + the §12 locality contrast, never on a scalar that
+fires on Class 4. This section closes that gap with the canonical complexity
+measures the §20 HANDOFF named as missing, **validates them against the
+known-class reference CAs**, and for the first time gives the headline a
+*coordinate*.
+
+**The instrument (`llm_life/complexity.py`).**
+
+- **Excess entropy `E`** (Crutchfield–Feldman effective measure complexity): the
+  predictive information stored in spatial configuration — the intercept of the
+  block-entropy line `H(n) ≈ h_μ·n + E`. High for Class 4 (gliders ⇒ long-range
+  order), ≈0 for Class 3 (chaos has no spatial memory) and the dead state.
+  Computed on the **live/dead binarized field**, because block entropy is only
+  well-sampled on a *small* alphabet — a large token alphabet saturates `H(n)` at
+  the sample-count ceiling (for signal *and* null alike) and structure cancels.
+  Binarizing to live/dead makes an LLM field commensurate with the binary CAs and
+  is exactly the right coarse-graining for the glider question (**gliders are
+  live/dead patterns**). Bias-controlled by subtracting an **IID-marginal
+  surrogate floor** (`E_excess = E_raw − E_iid`), ≈0 for a structureless field of
+  any alphabet size.
+- **Entropy rate `h_μ`** (asymptotic block-entropy slope): randomness per site.
+  The (`h_μ`, `E`) plane is Langton's complexity-vs-entropy picture.
+- **Configurational two-point token MI** `I(d)` (the "token correlation, not the
+  change-indicator field" the HANDOFF asked for), bias-corrected; reported as a
+  secondary, alphabet-aware structure probe.
+- **Local transfer entropy** (Lizier 2008): the per-cell, per-step information
+  transported from a neighbour — the repo's first *spatially resolved* diagnostic,
+  and a literal **glider filter**.
+
+**Validation (matched random init, `L=120`, post-burn, 2–3 seeds).** The plane
+separates the classes exactly where `τ_int`/`ξ` could not:
+
+| rule | class | `h_μ` | `E_excess` |
+|---|---|---:|---:|
+| 110 | 4 (edge) | 0.65 | **1.36 ± 0.42** |
+| 54  | 4 (edge) | 0.62 | **1.23 ± 0.16** |
+| 30  | 3 (chaos) | 1.00 | 0.00 |
+| 90  | 3 (chaos) | 0.99 | 0.02 |
+| 184 | 2 (conserved) | 0.18 | 0.94 |
+| 250 | 2 (fill) | 0.00 | 0.00 |
+| 0   | 1 (dead) | 0.00 | 0.00 |
+
+`τ_int` put Class-4 rule 110 *below* chaotic rule 30; **excess entropy puts it
+~90–370× above** (1.36 vs 0.004–0.015), robustly over seeds. The Class-4 corner
+is the only one with *both* substantial randomness (`h_μ`) and high stored
+structure (`E`): Class 3 = high `h_μ`, zero `E`; Class 2 = high `E`, near-zero
+`h_μ`; Class 1 = origin. And the **local-TE glider filter** traces rule 110's
+gliders as coherent diagonal filaments (mean **+0.62 bits**) while rule 30 is
+structureless red/blue speckle (**+0.00**) — the qualitative picture the project
+always leaned on, now a number (`results/glider_filter_localTE.png`).
+
+**The measurement — every LLM regime on the same validated plane**
+(`results/complexity_plane.png`):
+
+| variant | regime | `h_μ` | `E_excess` | live | reading |
+|---|---|---:|---:|---:|---|
+| causal pythia T0.5 | random-init soft | 0.45 | 0.22 | 0.87 | low structure |
+| causal pythia T1.0 | random-init soft | 0.10 | 0.02 | 0.99 | fills → ~origin |
+| masked distilR T1.2 | random-init soft | 0.00 | 0.00 | 1.00 | saturated fill → origin |
+| local distilR cone r3 | absorbing+refr, seeded | 0.71 | 0.42 | 0.75 | dense, mid |
+| **local bert osc pen2** | absorbing+penalty, seeded | 0.30 | **0.70** | 0.16 | **sparse — the closest** |
+| local bert osc pen2 r3 | absorbing+penalty+refr | 0.36 | 0.48 | 0.14 | sparse |
+
+**No LLM regime reaches the Class-4 corner** (high `E ≳ 1.2` *and* substantial
+`h_μ ≳ 0.4`). The variants split across the other three:
+
+- **Causal full-attention → the structureless / chaos region.** Lower-left:
+  `E ≤ 0.22`. At high `T` the lattice fills near-all-live (`live≈0.99`), so its
+  disorder lives in *token identity*, not live/dead geometry: token-space `I(1)`
+  is the only nonzero signal and there is no activity structure for a glider to be
+  made of — the dynamical face of §3/§4/§8's "synchronizes to noise."
+- **Masked / bidirectional random-init → the saturated-fill origin.** distilR
+  T=1.2 fills to `live=1.00` (`E=0`). Its texture is *entirely* in token identity
+  (token `I(1)=0.71`, a dense ordered token-fill) with **zero live/dead
+  geometry** — so the §8 "drifting clusters / closest to edge" reading, at matched
+  `L=120` random init, is a dense token-pattern, not an activity structure a
+  glider could inhabit.
+- **Sparse engineered "lifeforms" (bert + local penalty, seeded) → the Class-2
+  region.** The §14/§21 breathing oscillators are the only LLM fields with a real
+  *dead background* (`live=0.14–0.16`), and they sit at moderate `E` (0.48–0.70)
+  and low-moderate `h_μ` (0.30–0.36) — **clustered next to the rule-184 Class-2
+  anchor**, at ≈half of rule 110's excess entropy and lower `h_μ`. The validated
+  instrument thus *classifies* them: **Class-2 standing order, not Class-4
+  gliders** — the quantitative form of §14/§21's "commensurate standing waves, not
+  free life-forms." Their local-TE field confirms it: a visible localized band in
+  the raw lattice but weak, incoherent transport (mean +0.04 bits) vs rule 110's
+  +0.62.
+
+**Conclusion.** The "no edge of chaos" negative — previously carried by visuals +
+damage + locality — now holds on a **validated instrument**: across causal,
+masked, and local families, **no iterated-LLM cell occupies the Class-4 corner**.
+The plane reframes the project's whole arc as a *trajectory*: adding locality and
+a local birth/death penalty moves you off the chaos/fill corners toward structure,
+but overshoots into **Class-2 frozen/standing order** rather than landing on the
+**Class-4 edge** — exactly the §14/§21 verdict that the missing ingredient is
+Conway's fine-tuned local balance, not more locality. The masked family's "closest
+to edge" structure is, on this instrument, token-identity order on a saturated
+background; the sparse bert "lifeforms" are Class-2 standing waves. Rule 110 sits
+alone at the edge.
+
+*Caveats.* (1) The live/dead binarization is the right coarse-graining for the
+glider/activity question and makes LLM fields commensurate with binary CAs, but it
+discards token-identity structure — dense token-ordered fills (masked T=1.2, the
+§23 standing oscillators) correctly read as trivial *activity* geometry while
+carrying real token structure (reported via token `I(1)`); a glider, however, is
+an activity-geometry object, so this is the relevant axis. (2) `E`/`h_μ` at
+`L=120`, post-burn, 2–3 seeds (seeded sparse runs are deterministic, n=1); the
+bias-corrected `E` is stable but these are not infinite-`L` extrapolations — a
+finite-size `E(L)` scaling is the natural firm-up. (3) This measures the spatial
+complexity of the realized orbit, not a proof of (non-)universality. Refs:
+Langton 1990 (*Physica D*); Crutchfield & Feldman 2003 (*Chaos*, "Regenerating
+information"); Lizier, Prokopenko & Zomaya 2008 (local information transfer,
+arXiv 0809.3275); cond-mat/9409080.
+
 ## 11. Next steps
 
-1. **Local-neighborhood rule (the headline follow-up).** Restrict each site to
-   a window of ±w neighbors — via an explicit attention mask on a full-attention
-   model, a sliding-window-attention model (e.g. Mistral SWA), or a
-   state-space/recurrent model (Mamba). Finite signal speed is the precondition
-   for gliders; this is the experiment most likely to finally produce one.
-   *(Windowed-ring done — see §12. State-space/recurrent done — see §16: RWKV-4
-   and Mamba give finite* effective *range (a propagating absorbing front; a
-   coherent-sentence still-life under the soft rule) but no localized lifeform,
-   because a causal SSM ingests its whole left context in one synchronous pass —
-   only the explicit ±w window of §12 imposes true per-generation locality.)*
-2. **Local frequency penalty** — make the balance knob *local* (penalize by
-   neighborhood composition, not whole-grid counts), the natural pairing with #1.
-   *(Done — see §14: opens a sparse regime, but the (L × window × penalty) map
-   found no L-robust localized structure; the sparse band is a lattice-pinned
-   knife-edge between vacuum and fill, not a lifeform basin.)*
-3. **Finite-size scaling** of the absorbing transition (vary `L`) to test
-   whether `T_c ≈ 1.3` is a true critical point or a finite-size crossover.
-4. **Larger / local-attention base models** — does common-noise synchronization
-   (causal) vs. true chaos (masked) track architecture or scale?
-5. **Conditional-Lyapunov sweep** — map short-time rate and synchronization time
-   vs. temperature to locate where asymptotic synchronization breaks down.
+1. **Scale the §23 fate map.** Repeat `w×T` and the refined `w=2` boundary at
+   `L=96/192`, longer horizons, and 32+ pairs. Store raw damage fields, not just
+   endpoint CSVs.
+2. **Harden nulls.** Add logit-shuffle, random-initialized MLM/causal, and
+   temperature-matched marginal null models. The current nulls only cover
+   state-independent shared-noise baselines.
+3. **Measure geometry.** Estimate damage front velocities, avalanche-size
+   distributions, configurational token correlations, and mutual information for
+   representative fate-map cells. Pair these with GIFs.
+4. **Broaden models.** Add a second masked model, larger causal models, and
+   entropy-matched temperatures so the old causal/masked split becomes one axis of
+   the behavior map rather than the whole story.
+5. **Run the non-tautological quantization test.** Quantize a non-ternary model
+   such as `Qwen/Qwen3-1.7B-Base` and compare it to its own full-precision
+   checkpoint.
+6. **Keep gliders as a secondary search.** Focus on sparse BERT-like local regimes
+   and L-robust still-lifes first; the current evidence says spaceships are not
+   the nearest structure.
