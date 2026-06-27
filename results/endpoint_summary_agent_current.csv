@@ -1,0 +1,10 @@
+arch,model,model_tag,window,temp,pair_count,p_final_zero,p_sustained_zero_last10,mean_late_damage_final20pct,median_sync_time_sustained_last10,mean_peak_hamming
+causal,EleutherAI/pythia-160m,pythia-160m,,1.0,8,1,1,0,18.5,13.375
+causal,Qwen/Qwen3-1.7B-Base,Qwen3-1.7B-Base,,1.0,3,1,1,0,18,19
+local,distilroberta-base,distilroberta-base,1,1.0,8,1,1,0,2.5,3.625
+local,distilroberta-base,distilroberta-base,2,1.0,8,0.375,0.375,12.93382353,,18.625
+local,distilroberta-base,distilroberta-base,4,1.0,8,0.125,0.125,41.28676471,,47
+local,huggingface/CodeBERTa-small-v1,CodeBERTa-small-v1,2,1.0,8,0.375,0.375,18.27941176,,29.625
+masked,bert-base-uncased,bert-base-uncased,,1.0,8,0.25,0.25,23.08823529,,44.25
+masked,distilroberta-base,distilroberta-base,,1.0,8,0,0,47.39705882,,48
+masked,huggingface/CodeBERTa-small-v1,CodeBERTa-small-v1,,1.0,8,0.5,0.5,14.52941176,,45.125

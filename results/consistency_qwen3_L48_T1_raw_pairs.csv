@@ -1,0 +1,4 @@
+pair,init_seed,noise_seed,perturb_site,short_lam,peak_hamming,time_to_peak,final_hamming,synchronized,arch,model,model_tag,window,temp,L,steps,absorbing,freq_penalty
+0,3,11,1,0.8418239574966185,29.0,4,0.0,1,causal,Qwen/Qwen3-1.7B-Base,Qwen3-1.7B-Base,,1.0,48,60,0,0.0
+1,5003,5011,8,0.4513417001837017,19.0,7,0.0,1,causal,Qwen/Qwen3-1.7B-Base,Qwen3-1.7B-Base,,1.0,48,60,0,0.0
+2,10003,10011,15,1.0986122886681098,9.0,2,0.0,1,causal,Qwen/Qwen3-1.7B-Base,Qwen3-1.7B-Base,,1.0,48,60,0,0.0

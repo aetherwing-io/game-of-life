@@ -1,0 +1,2 @@
+arch,model,model_tag,window,temp,L,steps,pairs,absorbing,freq_penalty,final_mean,final_std,peak_mean,short_lam_mean,short_lam_std,sync_fraction,verdict
+causal,Qwen/Qwen3-1.7B-Base,Qwen3-1.7B-Base,,1.0,48,60,3,0,0.0,0.0,0.0,19.0,0.7972593154494767,0.26611940824854097,1.0,SYNC

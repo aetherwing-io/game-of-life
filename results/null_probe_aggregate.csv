@@ -1,0 +1,4 @@
+null,temp,L,steps,pairs,vocab,init_p_live,absorbing,final_mean,final_std,peak_mean,short_lam_mean,short_lam_std,exact_sync_fraction,sync_by_step1_fraction,mean_sync_step,verdict
+iid_uniform_v16,1.0,48,80,16,16,,,0.0,0.0,1.0,0.0,0.0,1.0,1.0,1.0,SYNC
+bernoulli_p0.5,1.0,48,80,16,2,0.5,,0.0,0.0,1.0,0.0,0.0,1.0,1.0,1.0,SYNC
+bernoulli_p0.5_absorbing_local_r1,1.0,48,80,16,2,0.5,local_r1,0.0,0.0,1.0625,0.02166084939249829,0.08389210896185292,1.0,0.8125,1.375,SYNC

@@ -1,0 +1,3 @@
+arch,model,model_tag,window,temp,L,steps,pairs,absorbing,freq_penalty,final_mean,final_std,peak_mean,short_lam_mean,short_lam_std,sync_fraction,verdict
+masked,huggingface/CodeBERTa-small-v1,CodeBERTa-small-v1,,1.0,48,80,8,0,0.0,12.75,20.129269733400662,45.125,0.5368809369648178,0.2705384800594341,0.5,partial
+local,huggingface/CodeBERTa-small-v1,CodeBERTa-small-v1,2,1.0,48,80,8,0,0.0,17.125,18.556922562752693,29.625,0.3265715383302965,0.14458623616793906,0.375,partial

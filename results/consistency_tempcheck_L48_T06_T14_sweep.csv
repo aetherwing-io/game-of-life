@@ -1,0 +1,5 @@
+arch,model,model_tag,window,temp,L,steps,pairs,absorbing,freq_penalty,final_mean,final_std,peak_mean,short_lam_mean,short_lam_std,sync_fraction,verdict
+causal,EleutherAI/pythia-160m,pythia-160m,,0.6,48,80,8,0,0.0,0.0,0.0,18.875,0.7417004680807919,0.17563741242299932,1.0,SYNC
+causal,EleutherAI/pythia-160m,pythia-160m,,1.4,48,80,8,0,0.0,0.0,0.0,10.125,0.807409829451496,0.6584966708111197,1.0,SYNC
+masked,distilroberta-base,distilroberta-base,,0.6,48,80,8,0,0.0,33.625,20.35888933611065,39.5,0.9290007605839175,0.3488559952449371,0.25,CHAOTIC
+masked,distilroberta-base,distilroberta-base,,1.4,48,80,8,0,0.0,41.75,8.771402396424417,45.625,0.4263818491400127,0.018117347082320025,0.0,CHAOTIC

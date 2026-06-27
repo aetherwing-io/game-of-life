@@ -295,8 +295,9 @@ def cmd_sweep(args):
             live = metrics.live_density(states, info["dead_token"])[burn:]
             # tau_int / xi must be measured on the post-burn STEADY STATE, not
             # the full trajectory -- otherwise the slow absorbing transient
-            # inflates the autocorrelation and masquerades as critical slowing
-            # down. (Edge-of-chaos shows up as a *peak* here, not a plateau.)
+            # inflates the autocorrelation and can be mistaken for critical
+            # slowing down. Here tau_int and xi are descriptive post-burn
+            # metrics, not standalone edge-of-chaos diagnostics.
             tau = metrics.integrated_autocorr_time(metrics.activity(states)[burn:])
             xi = metrics.spatial_corr_length(states[burn:])
             rows.append({
@@ -357,7 +358,7 @@ def _plot_sweep(temps, agg, args, info, stag):
     mode = "absorbing" if args.absorbing else "soft"
     fig.suptitle(f"LLM-CA phase sweep — {info['model']} ({info['arch']}), L={args.length}, "
                  f"{args.seeds} seeds, {mode}\n"
-                 f"tau_int / xi peaks locate the edge-of-chaos band")
+                 f"post-burn descriptive metrics; tau_int/xi are not edge-of-chaos locators")
     fig.tight_layout(rect=(0, 0, 1, 0.95))
     png = os.path.join(args.out, f"sweep_phasediagram_{stag}.png")
     fig.savefig(png, dpi=140)
@@ -429,7 +430,7 @@ def _plot_sweep2d(grids, temps, pens, args, info):
     mode = "absorbing" if args.absorbing else "soft"
     fig.suptitle(f"LLM-CA phase plane — {info['model']} ({info['arch']}), L={args.length}, "
                  f"{args.seeds} seeds, {mode}\n"
-                 f"disorder axis (T) x balance axis (penalty); look for a tau_int/xi ridge")
+                 f"disorder axis (T) x balance axis (penalty); tau_int/xi shown descriptively")
     fig.tight_layout(rect=(0, 0, 1, 0.95))
     png = os.path.join(args.out, f"sweep2d_{info['arch']}_{_model_tag(info['model'])}_{mode}.png")
     fig.savefig(png, dpi=140)
@@ -470,14 +471,14 @@ def cmd_damage(args):
         h = np.array(h, dtype=float)
         curves.append(h)
         est = metrics.lyapunov_estimate(h)
-        print(f"  pair {p}: lambda={est['lyapunov']:+.4f}  "
+        print(f"  pair {p}: early-growth lambda={est['lyapunov']:+.4f}  "
               f"final_hamming={est['final_hamming']:.0f}/{args.length}")
 
     H = np.vstack(curves)
     mean_h = H.mean(axis=0)
     std_h = H.std(axis=0)
     overall = metrics.lyapunov_estimate(mean_h)
-    print(f"[result] mean lambda={overall['lyapunov']:+.4f}  "
+    print(f"[result] mean early-growth lambda={overall['lyapunov']:+.4f}  "
           f"mean final separation={mean_h[-1]:.1f}/{args.length} sites")
 
     os.makedirs(args.out, exist_ok=True)
@@ -512,7 +513,7 @@ def _plot_damage(mean_h, std_h, args, overall, info, dtag):
     ax1.grid(alpha=0.3)
     ax2.semilogy(t, np.clip(mean_h, 1e-1, None), color="tab:orange", lw=1.5)
     ax2.set(xlabel="generation", ylabel="Hamming distance (log)",
-            title=f"log scale — lambda={overall['lyapunov']:+.4f}")
+            title=f"log scale — early-growth lambda={overall['lyapunov']:+.4f}")
     ax2.grid(alpha=0.3, which="both")
     mode = "absorbing" if args.absorbing else "soft"
     fig.suptitle(f"coupled-noise damage spreading — {info['model']} ({info['arch']}), "

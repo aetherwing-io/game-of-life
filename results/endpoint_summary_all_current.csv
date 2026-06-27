@@ -1,0 +1,20 @@
+source_file,arch,model_tag,window,temp,pair_count,p_final_zero,p_sustained_zero_last10,mean_late_damage_final20pct,median_sync_time_sustained_to_end,mean_peak_hamming,finals
+results/consistency_agent_code_L48_T1_hamming.csv,local,CodeBERTa-small-v1,2,1.0,8,0.375,0.375,18.279411764705884,,29.625,47 6 0 0 16 22 0 46
+results/consistency_agent_code_L48_T1_hamming.csv,masked,CodeBERTa-small-v1,,1.0,8,0.5,0.5,14.529411764705882,,45.125,2 48 5 0 47 0 0 0
+results/consistency_main_L48_T1_n16_s120_hamming.csv,causal,pythia-160m,,1.0,16,1.0,1.0,0.0,18.5,13.9375,0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+results/consistency_main_L48_T1_n16_s120_hamming.csv,local,distilroberta-base,1,1.0,16,1.0,1.0,0.0,2.5,2.8125,0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+results/consistency_main_L48_T1_n16_s120_hamming.csv,local,distilroberta-base,2,1.0,16,0.4375,0.4375,11.69,,17.625,20 20 25 27 0 0 0 25 19 15 0 0 0 0 23 16
+results/consistency_main_L48_T1_n16_s120_hamming.csv,local,distilroberta-base,4,1.0,16,0.125,0.125,41.675,,44.5625,48 48 0 47 48 48 48 48 0 48 47 48 48 48 47 48
+results/consistency_main_L48_T1_n16_s120_hamming.csv,masked,bert-base-uncased,,1.0,16,0.4375,0.4375,19.88,,45.625,0 33 0 38 0 39 0 35 0 5 13 38 0 35 0 41
+results/consistency_main_L48_T1_n16_s120_hamming.csv,masked,distilroberta-base,,1.0,16,0.0,0.0,47.375,,48.0,48 39 48 48 48 48 48 48 48 48 48 48 48 48 48 48
+results/consistency_matched_L48_T1_raw_hamming.csv,causal,pythia-160m,,1.0,8,1.0,1.0,0.0,18.5,13.375,0 0 0 0 0 0 0 0
+results/consistency_matched_L48_T1_raw_hamming.csv,local,distilroberta-base,1,1.0,8,1.0,1.0,0.0,2.5,3.625,0 0 0 0 0 0 0 0
+results/consistency_matched_L48_T1_raw_hamming.csv,local,distilroberta-base,2,1.0,8,0.375,0.375,12.933823529411764,,18.625,18 16 22 27 0 0 0 24
+results/consistency_matched_L48_T1_raw_hamming.csv,local,distilroberta-base,4,1.0,8,0.125,0.125,41.286764705882355,,47.0,48 48 0 47 48 48 48 48
+results/consistency_matched_L48_T1_raw_hamming.csv,masked,bert-base-uncased,,1.0,8,0.25,0.25,23.088235294117645,,44.25,12 43 4 36 0 40 0 44
+results/consistency_matched_L48_T1_raw_hamming.csv,masked,distilroberta-base,,1.0,8,0.0,0.0,47.39705882352941,,48.0,48 45 48 48 48 48 48 48
+results/consistency_qwen3_L48_T1_raw_hamming.csv,causal,Qwen3-1.7B-Base,,1.0,3,1.0,1.0,0.0,18,19.0,0 0 0
+results/consistency_tempcheck_L48_T06_T14_hamming.csv,causal,pythia-160m,,0.6,8,1.0,1.0,0.0,20.5,18.875,0 0 0 0 0 0 0 0
+results/consistency_tempcheck_L48_T06_T14_hamming.csv,causal,pythia-160m,,1.4,8,1.0,1.0,0.0,10.0,10.125,0 0 0 0 0 0 0 0
+results/consistency_tempcheck_L48_T06_T14_hamming.csv,masked,distilroberta-base,,0.6,8,0.25,0.25,33.55882352941177,,39.5,29 0 0 48 48 48 48 48
+results/consistency_tempcheck_L48_T06_T14_hamming.csv,masked,distilroberta-base,,1.4,8,0.0,0.0,41.68382352941176,,45.625,35 47 48 39 48 22 47 48
