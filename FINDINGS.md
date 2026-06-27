@@ -206,6 +206,28 @@ Two qualitative differences from causal:
   stays, vs causal's uniform healing to 0. Positive asymptotic conditional
   Lyapunov exponent: real sensitive dependence, not noise-driven pseudo-chaos.
 
+> **Matched-L reproduction (added per the §20 review — this is the project's one
+> genuinely-novel result, so it gets a real control).** The original comparison
+> was masked `L=48` vs causal `L=128`, figures-only. Re-run at **matched `L=48`,
+> `T=1.0`, 12 coupled-noise pairs**, with committed CSVs
+> (`results/damage_{causal_pythia-160m,masked_distilroberta-base}_soft_T1.0_L48.csv`):
+>
+> | arch (L=48, T=1.0) | short-time λ | final separation | verdict |
+> |---|---|---|---|
+> | causal (pythia-160m, full-attn) | +0.50 | **0.0 / 48** | synchronizes |
+> | masked (distilroberta, bidirectional) | +0.17 | **47.2 / 48** | stays chaotic |
+>
+> The **architecture-dependent sign flip of the *asymptotic* conditional Lyapunov
+> exponent holds at matched L**: both architectures have a positive *short-time*
+> exponent (local instability), but only the causal map contracts back to
+> synchrony under common noise; the bidirectional map saturates. This is the
+> defensible novel result — billed (per §20) as *"temperature-sampling 'chaos' in
+> iterated LLM inference is the consistency/echo-state property, with an
+> architecture-dependent breakdown."* Still open (the fuller firm-up): sweep T,
+> window `w`, and model scale to map where the causal map crosses into λ_cond>0
+> (if ever), and test the sync/no-sync transition for directed-percolation
+> universality.
+
 And the most structured texture in the whole study: the `T = 1.2` space-time
 diagram shows **localized, persistent activity clusters drifting on the
 quiescent dead background** — Class-4-*adjacent*, consistent with the masked
