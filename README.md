@@ -92,22 +92,24 @@ not the system's sensitivity to perturbation.
 
 Before claiming anything about an LLM, the same metrics and the same space-time
 renderer are run on **elementary cellular automata whose Wolfram class is known**
-(rule 110 = Class 4, rule 30 = Class 3, rule 250 = Class 2, …). This validates
-that the diagnostics actually separate the classes. They do — measured here:
+(rule 110 = Class 4, rule 30 = Class 3, rule 250 = Class 2, …).
 
-| rule | class | `ρ` | `H` (bits) | `τ_int` |
-|---|---|---|---|---|
-| 110 | 4 (edge of chaos) | 0.26 | 0.89 | **16.9** |
-| 30  | 3 (chaotic) | 0.50 | 0.99 | 1.6 |
-| 90  | 3 (Sierpinski) | 0.20 | 0.43 | 4.1 |
-| 250 | 2 (periodic) | 0.00 | 0.00 | 3.3 |
+**What validates the pipeline is the *visual* space-time diagram, not the scalar
+metrics.** An external review (see [`FINDINGS.md`](FINDINGS.md) §1 & §20) showed
+that `τ_int` and `ξ`, *as implemented*, do **not** separate the Wolfram classes:
+under a fair protocol (matched random init, post-burn) rule-110 (Class 4) reads
+`τ_int=0.47`, *lower* than chaotic rule-30's `1.39`, and `ξ=1.0` for 110/30/90
+alike. `τ_int` is an autocorrelation of *global activity* (spatially blind) and `ξ`
+of the *change-indicator* field (configuration-blind), so neither sees rule 110's
+gliders. The earlier "rule-110 τ_int ≈ 17–29, by far the highest" claim was an
+artifact of giving rule 110 a single-cell init (a long spreading transient) while
+the others got random init.
 
-The Class-4 rule has by far the highest autocorrelation time (critical slowing
-down) while the chaotic rule decorrelates almost instantly at near-maximal
-entropy — exactly the signature we then look for in the LLM. The rule-110
-space-time diagram (`results/ref_rule110.png`) is the canonical "this is what the
-edge of chaos looks like" picture: localized travelling structures (gliders) on a
-structured background.
+What the rule-110 space-time diagram (`results/ref_rule110.png`) *does* show — and
+no LLM variant reproduces — is **localized travelling structures (gliders) on a
+structured background**. That qualitative picture, plus damage-spreading and the
+locality contrast, carries the "no edge of chaos" negative; read every `τ_int`/`ξ`
+number below as descriptive, not as an edge-detector.
 
 ## Visualization
 

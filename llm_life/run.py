@@ -157,10 +157,20 @@ def cmd_single(args):
     rho = metrics.activity(states)
     live = metrics.live_density(states, info["dead_token"])
     ent = metrics.token_entropy(states)
-    tau = metrics.integrated_autocorr_time(rho)
-    xi = metrics.spatial_corr_length(states)
+    # tau_int / xi must be read on the post-burn STEADY STATE, not the full
+    # trajectory. A single-cell seed has a long nucleation/drift transient that
+    # inflates both -- the same artifact already fixed for the sweeps (cmd_sweep).
+    # These single runs typically FREEZE to a fixed point, so steady-state
+    # tau_int is ~0; treat tau/xi as descriptive of the transient, NOT as an
+    # edge-of-chaos signature (an external review found tau_int/xi do not even
+    # discriminate Wolfram classes here -- see FINDINGS sec 20).
+    burn = args.steps // 2
+    tau = metrics.integrated_autocorr_time(rho[burn:])
+    xi = metrics.spatial_corr_length(states[burn:])
+    tau_full = metrics.integrated_autocorr_time(rho)
     print(f"[result] mean rho={rho.mean():.4f}  mean entropy={ent.mean():.4f} bits  "
-          f"tau_int={tau:.2f}  xi={xi:.2f}  final live={live[-1]:.4f}")
+          f"tau_int(steady)={tau:.2f} (full-traj {tau_full:.2f})  xi(steady)={xi:.2f}  "
+          f"final live={live[-1]:.4f}")
 
     os.makedirs(args.out, exist_ok=True)
     pen_tag = f"_p{args.freq_penalty}" if getattr(args, "freq_penalty", 0.0) else ""
@@ -227,17 +237,28 @@ def cmd_reference(args):
     rgb = reference_ca.binary_rgb_table()
     classes = {110: "Class 4 (edge of chaos)", 30: "Class 3 (chaotic)",
                90: "Class 3 (Sierpinski)", 250: "Class 2 (periodic)", 0: "Class 1 (dead)"}
+    burn = args.steps // 2
     for rule in args.rules:
+        # VISUAL: render the canonical init for each rule (single-cell shows rule
+        # 110's gliders / rule 90's Sierpinski triangle). The space-time picture is
+        # what actually validates the pipeline.
         seed_mode = "single" if rule in (110, 90) else "random"
         st = reference_ca.elementary(rule, args.length, args.steps, seed=1, init=seed_mode)
         cls = classes.get(rule, "")
         title = f"Elementary CA rule {rule} — {cls}"
         save_spacetime(st, rgb, os.path.join(args.out, f"ref_rule{rule}.png"), title=title)
-        rho = metrics.activity(st)[args.steps // 4:]
-        ent = metrics.token_entropy(st)[args.steps // 4:]
-        tau = metrics.integrated_autocorr_time(metrics.activity(st))
+        # METRICS: compute on a MATCHED random init + post-burn for ALL rules, so
+        # the table is a fair cross-rule comparison. NOTE: with this honest
+        # protocol tau_int and xi do NOT separate the Wolfram classes (an earlier
+        # version cherry-picked per-rule init + full-trajectory tau, which is what
+        # produced the spurious rule-110 tau_int=28.9; see FINDINGS sec 1 & 20).
+        stm = reference_ca.elementary(rule, args.length, args.steps, seed=1, init="random")
+        rho = metrics.activity(stm)[burn:]
+        ent = metrics.token_entropy(stm)[burn:]
+        tau = metrics.integrated_autocorr_time(metrics.activity(stm)[burn:])
+        xi = metrics.spatial_corr_length(stm[burn:])
         print(f"rule {rule:>3} {cls:<26} rho={rho.mean():.3f}  H={ent.mean():.3f} bits  "
-              f"tau_int={tau:.2f}")
+              f"tau_int={tau:.2f}  xi={xi:.2f}  (matched random init, post-burn)")
         if args.animate:
             save_animation(st, rgb, os.path.join(args.out, f"ref_rule{rule}.gif"), title=title)
 

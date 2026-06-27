@@ -4,9 +4,18 @@ Experimental results for the question *"if you loop LLM inference — feed a
 token sequence in, take the output, feed it back — what kind of dynamical
 system do you get, and does it sit at the edge of chaos?"*
 
-**Model:** GPT-2 (124M, base). **Lattice:** `L=128` token sites. **Seeds:** 3
-unless noted. **Hardware:** CPU. All raw numbers in `results/sweep_raw_*.csv`
-and `results/damage_*_L128*.csv`; figures in `results/`.
+**Model:** GPT-2 (124M, base) for §1–15; §16–19 add RWKV/Mamba, ternary Bonsai,
+MLX 2-bit, and pythia/Qwen3-Base controls. **Lattice:** `L=128` (`L=48–96` for
+the newer variants). **Seeds:** 3 in the sweeps; **n=1 in most of §16–19**.
+**Hardware:** CPU / Apple MPS. Raw numbers in `results/*.csv`; figures in
+`results/`.
+
+> **Scope (added after external review, §20):** every model tested is **≤2B
+> params**, and small models are known to degenerate more readily and to behave
+> differently from large ones (e.g. arXiv 2509.26643 finds a minimum scale for
+> stable token distributions). Read the headline as *"for small (≤2B) base models
+> under this synchronous map,"* not as a claim about LLMs in general. The §16–19
+> single-run τ_int/ξ magnitudes are transient, not steady-state (§1, §20).
 
 ## TL;DR
 
@@ -42,24 +51,52 @@ perturbations amplify briefly then heal to zero. The apparent disorder is
 faithful transcription of the injected temperature noise, not sensitive
 dependence on initial conditions.
 
-## 1. The instruments work (reference baseline)
+## 1. The instruments, honestly (reference baseline) — the *visual* discriminates Wolfram class; τ_int and ξ do **not**
 
-The same metrics + space-time renderer run on elementary CAs of known Wolfram
-class correctly separate them (`results/ref_rule*.png`):
+> *Corrected after an external review (§20). The original version of this section
+> claimed τ_int separated the classes (rule-110 τ_int=28.9 = "critical slowing
+> down" vs rule-30's 1.25). That was a **confound**, not a result: the reference
+> table quietly gave each rule a different init (rules 110/90 a single live cell,
+> 30/250 a random row; `run.py` `cmd_reference`) and computed τ_int over the
+> **full** trajectory. Rule-110's 28.9 is its single-cell lattice-filling
+> transient (τ decays monotonically with burn-in, never converging), not critical
+> slowing down. Give rule 30 the same single-cell+full-trajectory treatment and it
+> reads 26.4 ≈ 110.*
 
-| rule | class | activity ρ | entropy (bits) | τ_int |
-|---|---|---|---|---|
-| 110 | 4 (edge of chaos) | 0.27 | 0.89 | **28.9** |
-| 30 | 3 (chaotic) | 0.50 | 0.99 | 1.25 |
-| 90 | 3 (Sierpinski) | 0.19 | 0.41 | 9.55 |
-| 250 | 2 (periodic) | 0.00 | 0.00 | 3.09 |
+Under a **fair** protocol — matched random init for every rule, post-burn (now the
+committed behavior) — the separation vanishes:
 
-The Class-4 rule shows the highest autocorrelation time (critical slowing
-down); chaotic rule 30 decorrelates instantly at near-max entropy. So when the
-same instruments report "no edge of chaos" for GPT-2, that is a meaningful
-negative, not an instrument failure.
+| rule | class | activity ρ | entropy (bits) | τ_int | ξ |
+|---|---|---|---|---|---|
+| 110 | 4 (edge of chaos) | 0.42 | 0.98 | **0.47** | 1.0 |
+| 30  | 3 (chaotic) | 0.50 | 1.00 | 1.39 | 1.0 |
+| 90  | 3 (Sierpinski) | 0.51 | 1.00 | 0.73 | 1.0 |
+| 250 | 2 (periodic) | 0.00 | 0.00 | 0.00 | 0.0 |
 
-## 2. Absorbing variant: a real absorbing-state transition (`T_c ≈ 1.3`)
+The Class-4 rule (110, τ_int=0.47) is now **indistinguishable from — indeed lower
+than — the chaotic rule 30** (1.39), and ξ=1.0 for 110, 30, and 90 alike.
+**Neither τ_int nor ξ, as implemented, discriminates the Wolfram classes** —
+τ_int is a temporal autocorrelation of *global activity* (blind to spatial
+structure) and ξ is a spatial autocorrelation of the *change-indicator* field
+(blind to token-configuration order, so it cannot see rule 110's gliders). Only
+ρ/entropy separate the dead/periodic rule 250 from the active rules.
+
+**What actually validates the pipeline is the qualitative space-time picture**:
+`results/ref_rule110.png` is full of localized travelling gliders and no LLM
+variant produces any — together with the damage-spreading analysis and the §12
+locality contrast. The "no edge of chaos" negative is therefore meaningful, but it
+rests on **visual + damage + locality** evidence, *not* on a τ_int/ξ edge-detector.
+Consequence for everything below: **every τ_int/ξ magnitude (§3, §12, §16–19) is
+descriptive of a transient, not a steady-state edge-of-chaos signature** — read it
+with the space-time image, never alone. Full audit in §20.
+
+## 2. Absorbing variant: an absorbing-state transition (`T_c ≈ 1.3`)
+
+> *Per §20: "directed-percolation transition" is downgraded to "DP-**style**
+> crossover" — an order parameter switching on is necessary but not sufficient for
+> DP; no exponents (β, ν) were measured and n=3. The DP hypothesis is reasonable
+> (single absorbing state, no conservation) but unproven without finite-size
+> scaling.*
 
 `results/sweep_phasediagram_absorbing.png`. With the "no spontaneous birth from
 vacuum" rule, the all-`\n` state is a true absorbing state. Activity, entropy,
@@ -592,8 +629,14 @@ boundary, so the map / Gumbel sampling / coupled noise / metrics are reused
 unchanged. We compare prism-ml's Ternary-Bonsai in its **native 2-bit MLX
 packing** against the same model **unpacked to fp16** (§17), at two sizes.
 
-**Result 1 — 2-bit packing reproduces fp16 dynamics exactly.** 1.7B-mlx-2bit vs
-1.7B-unpacked, identical settings:
+**Result 1 — 2-bit packing converges to the same attractor as fp16.** *(Framing
+corrected per §20: this is a near-tautology — the unpacked and mlx-2bit
+checkpoints are the **same trained ternary network** in two storage formats, so
+≈identical logits are expected, not discovered. It validates the MLX backend; it
+is not evidence about quantization in general. And it is not "exact": the
+**transients differ** (decoded grids diverge at several generations); only the
+**fixed point** matches.)* 1.7B-mlx-2bit vs 1.7B-unpacked, identical settings
+(τ/ξ shown are full-trajectory transients, ≈0 at steady state — see §1/§20):
 
 | run | 1.7B-mlx-2bit | 1.7B-unpacked (§17) |
 |---|---|---|
@@ -602,12 +645,14 @@ packing** against the same model **unpacked to fp16** (§17), at two sizes.
 | soft fill content | *identical Chinese sentence* | *1990年…国际法体系* |
 | damage soft T=0.6 | λ_short=**+0.747**, heals to 0/96 | λ_short=**+0.745**, heals to 0/96 |
 
-The two are the same down to fp-noise, in the ordered (still-life) *and* chaotic
-(synchronization) regimes. So §17's "extreme quantization is dynamically
-transparent" now holds at the level of the actual packed 2-bit kernels, not just
-materialised ternary weights — the runtime quantization perturbs nothing
-measurable. (It is, after all, the same trained network; this confirms the MLX
-path and the packing introduce no dynamical artifact.)
+The two reach the same fixed point with the same phase (vacuum / fill / sync) in
+the ordered and chaotic regimes — confirming the MLX backend and packing introduce
+no dynamical artifact. **But because it is the same trained network, this is a
+backend-validation, not a quantization result.** The genuinely non-tautological
+quantization test — quantize a *non-ternary* model (e.g. Qwen3-1.7B-Base) to 2-bit
+and compare to its own fp32 self — has not been run; it is the right next step
+(§20). The substantive quantization-era claim is §19's: the attractor is set by the
+**checkpoint/training**, not the bit-width.
 
 **Result 2 — the checkpoint, not the bits, drives the attractor.** The 8B-mlx-2bit
 soft single-cell run *also* fills (live 0.99) but into a **degenerate near-uniform
@@ -686,6 +731,109 @@ Bonsai-1.7B `:`, Qwen3-1.7B-Base `Human` (= Qwen2.5-base, §13), Bonsai-8B `' '`
 The method working as intended: the controls killed two tidy generalizations and
 left the defensible core — the absorbing drift is rule-universal, and the soft-T=0
 attractor is checkpoint-specific.
+
+## 20. External review: audit, corrections, and the one result worth elevating
+
+A three-reviewer panel (complexity-science, ML-literature, methodology lenses)
+audited §1–19 against the code and the literature, debated to convergence, and ran
+several of its own reproductions. Headline verdicts (no edge of chaos;
+checkpoint-not-bit-width; the §19 controls) **survive**; several quantitative and
+novelty claims were **corrected**. The fixes above (§1, §18, TL;DR scope) are
+already applied; this section records the rest.
+
+**Verified bugs / overclaims (corrected):**
+
+1. **τ_int/ξ never discriminated Wolfram class (§1).** Confirmed by re-running the
+   init×burn matrix: under matched random init, rule-110 τ_int=0.47 ≈ rule-30's
+   1.39, and ξ=1.0 for 110/30/90 alike. Burn-in does *not* rescue it (single-init
+   post-burn: 110≈30≈250). Fixed in `cmd_reference`; §1 rewritten.
+2. **Single-run τ_int/ξ are transient, not steady-state (§16–19).** `cmd_single`
+   computed them over the full trajectory (no burn-in), unlike `cmd_sweep`. Every
+   §16–19 run *freezes* (activity→0), so the true steady-state τ_int≈0; the
+   reported 10–15 was 100% nucleation transient. Fixed in `cmd_single` (now
+   post-burn). Treat all §16–19 τ_int/ξ/ρ magnitudes as **directional, single-seed,
+   transient** — never steady-state signatures.
+3. **§4/§16 synchronization is a known phenomenon, not novel.** It is the
+   echo-state/**consistency** property (Lymburn et al., *Chaos* 2019; Mainen–
+   Sejnowski 1995; common-noise sync, Pikovsky/Toral); the *identical* shared-Gumbel
+   mechanism is already published on LLM sampling (*Recycled Gumbel Noise*, NAACL
+   2025, arXiv 2503.00831). It is a **real** conditional-Lyapunov effect (not a
+   tautology — proof below), but bill it as a re-instance + diagnostic, not a
+   discovery.
+4. **"Directed-percolation transition" (§2) is unsupported** — no measured exponents
+   (β, ν⊥, ν∥), n=3. Downgrade to "DP-style crossover" pending finite-size scaling.
+5. **"Fingerprint of *the checkpoint*" is overstated (§16/§17/§19).** A control the
+   panel ran — pythia-160m (full-attention) and RWKV-169m (recurrent), two
+   architectures sharing only the NeoX tokenizer + Pile corpus — converge to the
+   **same** Pile code-Q&A still-life ("How to get the value of a variable in a
+   function?…"), identical across 8 seeds. The attractor is a **corpus/tokenizer-
+   family** property, not checkpoint-unique. Correct reading is a three-level
+   hierarchy: *collapse* itself = generic data-driven degeneration (universal, not a
+   finding; Holtzman 2020, "Repetition In Repetition Out" 2310.10226); *what
+   survives* (frequent > ornate) = self-predictivity (§15); *which basin* = training
+   — coarse genre set by the corpus family, specific basin selected by post-training
+   (§13 base-vs-instruct flip; §19 Bonsai-vs-Qwen3-Base twins reach different
+   basins). Soften the single-greedy-run genre reads; keep §13/§19's controlled
+   basin-selection signal.
+6. **Absorbing "+1/gen drift" is rule-dominated (§16).** The frontier march and
+   drain-to-vacuum are geometrically forced by the vacuum mask (model-independent);
+   peak live density before draining spans 50× (Mamba 1, RWKV 5, Qwen3-Base 23,
+   pythia 32, Bonsai 46/96) — only RWKV/Mamba "drift" cleanly, the rest *bloom*
+   first. So absorbing single-cell is a weak model-discriminator.
+7. **Ground-state catalogue (§13/§16–19): real but shallow.** argmax-from-BOS is
+   BOS-convention-dependent and partly circular with the absorbing rule (which is
+   defined by force-killing to it); the catalogue is high-frequency structural
+   tokens — a tokenizer/frequency fingerprint, not a deep semantic probe.
+
+**What the panel verified as SOLID (some strengthened):**
+
+- **§19 Control B is seed-robust** — multi-seed test (which the doc lacked):
+  pythia/RWKV fill 0.990 across 8 seeds (std 0.000); Qwen3-1.7B-Base freezes to
+  0.438 across 3 — so *fill-vs-freeze is checkpoint-specific, not architecture /
+  scale / precision*, the real quantization-era claim. The earlier n=1 worry is
+  resolved (the *attractor content* is near-deterministic; only the τ_int/ξ
+  *magnitudes* are fragile — two different reliabilities).
+- §19 Control A (absorbing drift rule-universal), the SSM finite-*effective*-range
+  caveat (§16), §15's frequency filter (Spearman ρ=0.285 reproduced), and the
+  visual + damage + §12 locality evidence for the headline negative.
+
+**The synchronization billing (use this exact framing):** *"Temperature-sampling
+'chaos' in iterated LLM inference is the consistency/echo-state property — faithful
+transcription of injected noise — with an architecture-dependent breakdown:
+full-attention synchronizes (λ_cond<0), bidirectional does not (λ_cond>0)."* It is
+**not** a tautology: under the same shared noise, causal heals to 0 but masked
+**stays separated** (§8) — if shared noise forced sync, masked couldn't. And the
+causal soft-T=1.0 replicas sync while staying *high-activity* (ρ→1) — locking onto
+a common fluctuating orbit, not draining to a dead fixed point. Honest hedge:
+discreteness makes *low*-activity sync semi-trivial; the informative regime is the
+high-activity one.
+
+**The one genuinely novel, pursuable result — and it is under-powered.** The
+contributions that survive as new (vs the non-spatial iterated-inference work —
+Zhilin Wang et al., *Attractor Cycles in LLMs*, ACL 2025, arXiv 2502.15208; and vs
+LifeGPT npj 2025, which is the *inverse* problem) are: (i) the **spatially-extended
+synchronous-CA apparatus** with a tunable coupling neighborhood, and (ii) the
+**architecture-dependent λ_cond sign split** (§8). But §8 rests on a *single*
+masked run at L=48 vs causal L=128, figures-only (no committed CSV). **Before this
+is a headline it must be reproduced at matched L, multi-seed, with raw Hamming
+data.** (The masked rule's *iteration* is itself known — Gibbs sampling from a BERT
+MRF: Wang & Cho 2019 arXiv 1902.04094; Mask-Predict, Ghazvininejad 2019 arXiv
+1904.09324; only the CA-diagnostic framing is new.)
+
+**Prioritized firm-up list (panel consensus):**
+1. Reproduce the §8 causal-vs-masked λ_cond sign split at **matched L, multi-seed,
+   raw CSVs**; sweep (T, window w, **scale**) — does a causal model *ever* reach
+   λ_cond>0, or are causal models universally synchronizing? Test DP universality.
+2. Finite-size scaling of the absorbing T_c (vary L) to earn or drop the "DP" label.
+3. The non-tautological quantization test (Qwen3-Base 2-bit vs its fp32 self);
+   replace τ_int/ξ with a configurational two-point token correlation / spatial
+   mutual-information + the MI-peak-at-λ_c standard edge-of-chaos discriminator.
+
+*Process note:* findings cross-checked by three independent reviewers to
+convergence; the central bug (§1) and the §19 Control B robustness were reproduced
+locally. Key refs added: 2502.15208 (ACL 2025), 1902.04094, 1904.09324, 2503.00831
+(NAACL 2025), 2310.10226, 2510.22954 (NeurIPS 2025), 2509.26643 (EMNLP 2025),
+1901.07729 (*Chaos* 2019).
 
 ## 11. Next steps
 
