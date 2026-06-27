@@ -1,0 +1,16 @@
+arch,model,temp,final_sep,final_std,short_lam,L,verdict
+causal,pythia-160m,0.4,0.0,0.0,0.5036,48,SYNC
+causal,pythia-160m,0.6,0.0,0.0,0.7517,48,SYNC
+causal,pythia-160m,0.8,0.0,0.0,0.541,48,SYNC
+causal,pythia-160m,1.0,0.0,0.0,0.6982,48,SYNC
+causal,pythia-160m,1.2,0.0,0.0,0.6062,48,SYNC
+causal,pythia-160m,1.4,0.0,0.0,0.5594,48,SYNC
+masked,distilroberta-base,0.4,29.0,23.28,0.9392,48,CHAOTIC
+masked,distilroberta-base,0.6,36.4,19.14,0.7372,48,CHAOTIC
+masked,distilroberta-base,0.8,37.8,18.98,0.5197,48,CHAOTIC
+masked,distilroberta-base,1.0,33.6,22.0,0.4768,48,CHAOTIC
+masked,distilroberta-base,1.2,43.1,14.37,0.3757,48,CHAOTIC
+masked,distilroberta-base,1.4,34.8,17.58,0.3014,48,CHAOTIC
+causal,Qwen3-1.7B-Base,0.8,0.0,0.0,0.6808,48,SYNC
+causal,Qwen3-1.7B-Base,1.0,0.0,0.0,0.6471,48,SYNC
+causal,Qwen3-1.7B-Base,1.2,0.0,0.0,1.0088,48,SYNC

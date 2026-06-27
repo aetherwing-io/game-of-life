@@ -220,13 +220,28 @@ Two qualitative differences from causal:
 > The **architecture-dependent sign flip of the *asymptotic* conditional Lyapunov
 > exponent holds at matched L**: both architectures have a positive *short-time*
 > exponent (local instability), but only the causal map contracts back to
-> synchrony under common noise; the bidirectional map saturates. This is the
-> defensible novel result — billed (per §20) as *"temperature-sampling 'chaos' in
-> iterated LLM inference is the consistency/echo-state property, with an
-> architecture-dependent breakdown."* Still open (the fuller firm-up): sweep T,
-> window `w`, and model scale to map where the causal map crosses into λ_cond>0
-> (if ever), and test the sync/no-sync transition for directed-percolation
-> universality.
+> synchrony under common noise; the bidirectional map saturates.
+>
+> **Temperature × scale sweep (`results/lam_sweep_T.csv`, L=48, 10 pairs/cell).**
+> The split is *not* a single-temperature accident — it is the whole phase plane:
+>
+> | model (arch) | final separation, T = 0.4 → 1.4 |
+> |---|---|
+> | pythia-160m (causal, 160M) | **0.0 at every T** (always synchronizes) |
+> | Qwen3-1.7B-Base (causal, 1.7B) | **0.0** at T=0.8/1.0/1.2 (always synchronizes) |
+> | distilroberta (masked, bidir) | **29 → 43 / 48 at every T** (never synchronizes) |
+>
+> So a **causal full-attention map is universally synchronizing** — across the full
+> temperature range *and* a 10× scale jump (160M→1.7B), it never reaches λ_cond>0
+> despite positive short-time exponents (0.5–1.0). The consistency breakdown is
+> driven by **bidirectional coupling, not temperature or scale**. This is the
+> sharpest form of the result: *full-attention causal LLM inference is a
+> consistent (echo-state) map; bidirectional coupling is what destroys
+> consistency.* (Honest caveats: the masked side is one model with high
+> pair-to-pair variance, std 14–23 — it is bimodal, most pairs saturate; the
+> causal side is clean, std 0. Still open: a second masked model, larger scale,
+> and the **±w windowed-ring** interpolation between causal-sync and masked-chaos,
+> plus a finite-size-scaling test of the transition for DP universality.)
 
 And the most structured texture in the whole study: the `T = 1.2` space-time
 diagram shows **localized, persistent activity clusters drifting on the
