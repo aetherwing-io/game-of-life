@@ -467,11 +467,13 @@ the vacuum mask forces the leftmost live cell dead every generation while leavin
 sites to its right free to sample, so the live frontier can only march right at
 the +1/gen "light cone." The model's only job is to decide whether to populate
 the new frontier site with a live token (front advances) or the dead token (front
-collapses). The recency-biased SSMs keep emitting a whitespace token at the
-frontier, so the front advances; GPT-2's absorbing runs (§2) instead drain. This
-is a degenerate, content-free echo of the §12 windowed-ring propagation — reached
-via architecture rather than an explicit mask — and it leaves pure vacuum behind,
-not a structure.
+collapses). The recency-biased SSMs keep emitting a token at the frontier, so the
+front advances. (A matched single-cell control — §19 — shows this advancing drift
+is **universal** across causal models, full-attention pythia included, *not* an
+SSM trait; the "GPT-2 drains" comparison was §2's *random*-init run, a different
+experiment.) This is a degenerate, content-free echo of the §12 windowed-ring
+propagation — reached via the absorbing rule, not an explicit mask — and it leaves
+pure vacuum behind, not a structure.
 
 **B. Soft (non-absorbing) + single cell → the absorbing rule was doing the
 killing.** Remove the vacuum mask and the picture inverts. RWKV at T=0 from the
@@ -494,10 +496,11 @@ nucleation transient). It is markedly more "alive" than GPT-2's soft-T=0 state,
 which has the same ξ but ~10× lower activity and is whitespace-dominated. It is
 tempting to credit recurrence for growing a *globally self-consistent sentence*
 where GPT-2 grows whitespace — but §17 shows a *full-attention* Bonsai-1.7B fills
-to a coherent still-life too, so the fill-vs-freeze split tracks **capability/scale,
-not attention topology**; a matched full-precision control is the clean test. As in
-§12/§13/§15, the stable structure is a training-data fingerprint: it is built from
-the model's own most mutually-predictive tokens.
+too, so it is not recurrence. It is **not scale either**: the matched full-precision
+Qwen3-1.7B-Base (same arch and scale as Bonsai) half-freezes instead of filling
+(§19). The fill is **checkpoint-specific**. As in §12/§13/§15, the stable structure
+is a training-data fingerprint: it is built from the model's own most mutually-
+predictive tokens.
 
 **Conclusion: the SSM hypothesis is partly right and mostly wrong.** *Right:*
 architecture alone (recency bias) does change the dynamics — it produces a
@@ -565,14 +568,15 @@ ternary change the iterated-map *dynamics*, or only the attractor's token conten
    models. Whatever determines the iterated map's behaviour is robust to crushing
    the weights to {−1, 0, +1}; only the *genre* of the attractor tokens (a function
    of the training mix) changes, not the dynamics.
-2. **Fill-vs-freeze is not about attention topology.** GPT-2 (124M, full attention)
-   *freezes* to whitespace under soft T=0 (§3); RWKV-169m (recurrent) **and**
-   Bonsai-1.7B (full attention) both *fill* to a coherent-sentence still-life. So
-   the soft-T=0 fill is not a recurrence effect — it tracks model
-   capability/scale. (§16 tentatively attributed it to recurrence; this corrects
-   that.) The clean isolation is the pending full-precision Qwen3-1.7B control
-   (does a same-arch, same-scale, *non*-ternary model fill identically?) plus a
-   larger GPT-2.
+2. **Fill-vs-freeze is checkpoint-specific** — not attention topology, and (per
+   the §19 control) **not scale either.** GPT-2 (124M, full attention) *freezes*
+   to whitespace under soft T=0 (§3); RWKV-169m and Bonsai-1.7B both *fill* to a
+   coherent-sentence still-life — so it is not a recurrence effect. But the
+   matched full-precision twin, Qwen3-1.7B-Base (same arch, same 1.7B scale),
+   does **not** fill (it half-freezes, live=0.44; §19) — so it is not a scale
+   effect either. The soft-T=0 attractor is set by the specific checkpoint's
+   training. (§19 has the control; this supersedes the earlier "tracks scale"
+   reading.)
 
 *Caveats:* single seeds; the "unpacked" checkpoint stores ternary values in fp16,
 so this measures the *trained-ternary network's* dynamics, not behaviour under
@@ -624,6 +628,64 @@ quantization is a red herring; the checkpoint's training is everything.
 
 *Caveats:* single seeds; the MLX bridge runs the torch side on CPU (fine — the
 forward dominates); the 8B was characterised on the single-cell runs only.
+
+## 19. Matched controls overturn two earlier claims (this is why we ran them)
+
+`results/tokens_causal_pythia-160m_*`, `tokens_causal_Qwen3-1.7B-Base_*`,
+`spacetime_causal_{pythia-160m,Qwen3-1.7B-Base}_*`. Two controls — a
+tokenizer-matched full-attention baseline (**pythia-160m**, GPT-NeoX) and a
+same-architecture, same-scale, full-precision baseline (**Qwen3-1.7B-Base**, the
+non-ternary twin of Bonsai-1.7B) — each refute an overreach above. The harness
+was built to let controls do exactly this.
+
+**Control A — the absorbing drift is universal, not a recurrence signature.** §16
+read the RWKV/Mamba +1/gen frontier drift as something the recency-biased SSMs do
+that GPT-2 does not — but the GPT-2 comparison it leaned on (§2) was *random*-init,
+not single-cell. The matched single-cell control settles it: every causal model
+drifts at +1/gen to vacuum.
+
+| absorbing, single cell, T=0 | arch | dead | ρ | ξ | final live |
+|---|---|---|---|---|---|
+| pythia-160m | full-attn (NeoX) | `Q` | 0.064 | 10 | 0.00 |
+| RWKV-4-169m | recurrent | `Q` | 0.021 | 2 | 0.00 |
+| Mamba-130m | SSM | `Q` | 0.020 | 2 | 0.00 |
+| Bonsai-1.7B | full-attn (Qwen3, ternary) | `:` | 0.014 | 2 | 0.00 |
+| Qwen3-1.7B-Base | full-attn (Qwen3, fp) | `Human` | 0.048 | 8 | 0.00 |
+
+So the drift is the **absorbing rule's frontier** — universal across causal
+models; the architecture only sets the transient's width (ξ) and which token rides
+the front (pythia: `<|endoftext|>`; Qwen3-Base: a leftward phrase fragment
+*"…a is what,"*). §16's core mechanism ("the absorbing rule, not the model") was
+right; its hint that *advancing* vs *draining* separates SSMs from full attention
+was not — they all advance, then run off the lattice into vacuum.
+
+**Control B — fill-vs-freeze is checkpoint-specific, NOT scale.** §17 concluded the
+soft-T=0 *fill* (Bonsai reaching a coherent still-life vs GPT-2 freezing) "tracks
+scale, not attention topology." The full-precision twin refutes it. **Qwen3-1.7B-
+Base — same Qwen3 architecture and 1.7B scale as Bonsai — does not fill:** soft
+single-cell T=0 reaches a sparse, half-lattice, near-frozen state (ρ=0.035,
+live=0.44, ξ=5; the right half locks into a `1 · 1 · 1 0 · 1` digit/dead
+alternation, the left half stays dead), where Bonsai-1.7B fills the whole lattice
+(live=0.99) with a coherent Chinese sentence. Same architecture, same scale,
+opposite fill. So the soft-T=0 attractor (freeze / partial-fill / full coherent
+fill) is a **per-checkpoint, training-dependent** property — it does not reduce to
+scale, attention topology, or precision.
+
+**What this does and does not say about ternary.** It does *not* make Bonsai's
+richer fill a ternary effect: Bonsai and Qwen3-1.7B-Base are *different checkpoints*
+(different ground states — Bonsai `:` vs Qwen3-Base `Human`), so this comparison
+cannot isolate quantization from training. The clean quantization test remains §18
+(the *same* Bonsai checkpoint at 2-bit vs fp16 — identical). Net: quantization
+*packing* is transparent (§18, same checkpoint), but the *attractor* is set by the
+checkpoint's training, and even same-arch/same-scale checkpoints differ sharply.
+
+**Ground-state catalogue** (argmax from BOS — a tokenizer/training fingerprint):
+GPT-2 `\n`, distilroberta `Advertisements`, pythia/RWKV/Mamba `Q` (Pile/NeoX),
+Bonsai-1.7B `:`, Qwen3-1.7B-Base `Human` (= Qwen2.5-base, §13), Bonsai-8B `' '`.
+
+The method working as intended: the controls killed two tidy generalizations and
+left the defensible core — the absorbing drift is rule-universal, and the soft-T=0
+attractor is checkpoint-specific.
 
 ## 11. Next steps
 
