@@ -1,0 +1,160 @@
+model,pen,refr,seed,cls,final_live,mean_live,mean_support,mean_act,period,velocity,score
+CodeBERTa-small-v1,0.0,0,( ),FILL,1.0,0.996,62.8,0.594,4,0.0,0.0
+CodeBERTa-small-v1,0.0,0,( ) ( ),FILL,1.0,1.0,63.0,0.844,2,0.0,0.0
+CodeBERTa-small-v1,0.0,0,[ ],FILL,1.0,0.996,62.8,0.523,4,0.0,0.0
+CodeBERTa-small-v1,0.0,0,{ },FILL,1.0,0.996,62.8,0.461,4,0.0,0.0
+CodeBERTa-small-v1,0.0,0,( a ),FILL,1.0,1.0,63.0,0.688,2,0.0,0.0
+CodeBERTa-small-v1,0.0,0,a b a b,FILL,1.0,1.0,63.0,0.688,2,0.0,0.0
+CodeBERTa-small-v1,0.0,0,0 1 0 1,FILL,1.0,1.0,63.0,0.906,2,0.0,0.0
+CodeBERTa-small-v1,0.0,0,yes no,FILL,1.0,0.996,62.8,0.594,4,0.0,0.0
+CodeBERTa-small-v1,0.0,0,a a b,FILL,1.0,1.0,63.0,0.562,2,0.0,0.0
+CodeBERTa-small-v1,0.0,0,1 2 3,FILL,1.0,1.0,63.0,0.453,2,0.0,0.0
+CodeBERTa-small-v1,0.0,0,x y z,FILL,1.0,1.0,63.0,0.688,2,0.0,0.0
+CodeBERTa-small-v1,0.0,0,the quick brown fox,FILL,1.0,1.0,63.0,0.781,2,0.0,0.0
+CodeBERTa-small-v1,0.0,0,hello world,FILL,1.0,0.996,62.8,0.594,4,0.0,0.0
+CodeBERTa-small-v1,0.0,0,def f ( ) :,FILL,1.0,1.0,63.0,0.0,1,-2.0,0.0
+CodeBERTa-small-v1,0.0,0,return x,FILL,1.0,0.996,62.8,0.594,4,0.0,0.0
+CodeBERTa-small-v1,0.0,0,"[ 0 , 1 ]",FILL,1.0,1.0,63.0,0.875,2,0.0,0.0
+CodeBERTa-small-v1,0.0,0,"( a , b )",FILL,1.0,1.0,63.0,0.047,2,0.0,0.0
+CodeBERTa-small-v1,0.0,0,() }finalFire {}this,FILL,1.0,1.0,63.0,0.781,2,0.0,0.0
+CodeBERTa-small-v1,2.0,0,( ),FILL,1.0,1.0,63.0,1.0,2,-2.0,0.0
+CodeBERTa-small-v1,2.0,0,( ) ( ),FILL,1.0,1.0,63.0,0.906,4,0.0,0.0
+CodeBERTa-small-v1,2.0,0,[ ],FILL,1.0,1.0,63.0,0.836,4,0.0,0.0
+CodeBERTa-small-v1,2.0,0,{ },FILL,1.0,1.0,63.0,0.836,4,0.0,0.0
+CodeBERTa-small-v1,2.0,0,( a ),FILL,1.0,1.0,63.0,0.833,6,0.0,0.0
+CodeBERTa-small-v1,2.0,0,a b a b,FILL,1.0,1.0,63.0,0.906,4,0.0,0.0
+CodeBERTa-small-v1,2.0,0,0 1 0 1,FILL,1.0,1.0,63.0,0.906,4,0.0,0.0
+CodeBERTa-small-v1,2.0,0,yes no,FILL,1.0,1.0,63.0,1.0,2,-2.0,0.0
+CodeBERTa-small-v1,2.0,0,a a b,FILL,1.0,1.0,63.0,0.833,6,0.0,0.0
+CodeBERTa-small-v1,2.0,0,1 2 3,FILL,1.0,1.0,63.0,0.833,6,0.0,0.0
+CodeBERTa-small-v1,2.0,0,x y z,FILL,1.0,1.0,63.0,0.833,6,0.0,0.0
+CodeBERTa-small-v1,2.0,0,the quick brown fox,FILL,1.0,1.0,63.0,0.922,2,0.0,0.0
+CodeBERTa-small-v1,2.0,0,hello world,FILL,1.0,1.0,63.0,1.0,2,-2.0,0.0
+CodeBERTa-small-v1,2.0,0,def f ( ) :,FILL,1.0,1.0,63.0,1.0,2,-2.0,0.0
+CodeBERTa-small-v1,2.0,0,return x,FILL,1.0,1.0,63.0,1.0,2,-2.0,0.0
+CodeBERTa-small-v1,2.0,0,"[ 0 , 1 ]",FILL,1.0,1.0,63.0,1.0,2,-2.0,0.0
+CodeBERTa-small-v1,2.0,0,"( a , b )",FILL,1.0,1.0,63.0,1.0,2,-2.0,0.0
+CodeBERTa-small-v1,2.0,0,() }finalFire {}this,FILL,1.0,1.0,63.0,0.922,2,0.0,0.0
+CodeBERTa-small-v1,2.0,3,( ),FILL,0.75,0.75,61.0,0.979,8,0.0,0.047
+CodeBERTa-small-v1,2.0,3,( ) ( ),FILL,0.75,0.75,60.0,0.977,8,0.0,0.062
+CodeBERTa-small-v1,2.0,3,[ ],FILL,0.734,0.75,61.0,0.969,4,0.0,0.047
+CodeBERTa-small-v1,2.0,3,{ },FILL,0.734,0.75,61.0,0.969,4,0.0,0.047
+CodeBERTa-small-v1,2.0,3,( a ),FILL,0.75,0.75,60.8,0.969,4,0.0,0.051
+CodeBERTa-small-v1,2.0,3,a b a b,FILL,0.75,0.75,60.0,0.977,8,0.0,0.062
+CodeBERTa-small-v1,2.0,3,0 1 0 1,FILL,0.75,0.75,60.0,0.977,8,0.0,0.062
+CodeBERTa-small-v1,2.0,3,yes no,FILL,0.75,0.75,61.0,0.979,8,0.0,0.047
+CodeBERTa-small-v1,2.0,3,a a b,FILL,0.75,0.75,60.8,0.969,4,0.0,0.051
+CodeBERTa-small-v1,2.0,3,1 2 3,FILL,0.75,0.75,60.8,0.969,4,0.0,0.051
+CodeBERTa-small-v1,2.0,3,x y z,FILL,0.75,0.75,60.8,0.969,4,0.0,0.051
+CodeBERTa-small-v1,2.0,3,the quick brown fox,FILL,0.719,0.75,61.0,0.996,4,0.0,0.047
+CodeBERTa-small-v1,2.0,3,hello world,FILL,0.75,0.75,61.0,0.979,8,0.0,0.047
+CodeBERTa-small-v1,2.0,3,def f ( ) :,FILL,0.734,0.75,60.8,0.98,4,0.0,0.051
+CodeBERTa-small-v1,2.0,3,return x,FILL,0.75,0.75,61.0,0.979,8,0.0,0.047
+CodeBERTa-small-v1,2.0,3,"[ 0 , 1 ]",FILL,0.734,0.75,60.8,0.98,4,0.0,0.051
+CodeBERTa-small-v1,2.0,3,"( a , b )",FILL,0.734,0.75,60.8,0.98,4,0.0,0.051
+CodeBERTa-small-v1,2.0,3,() }finalFire {}this,FILL,0.719,0.75,61.0,0.996,4,0.0,0.047
+bert-base-uncased,0.0,0,( ),DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,( ) ( ),DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,[ ],DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,{ },DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,( a ),DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,a b a b,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,0 1 0 1,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,yes no,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,a a b,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,1 2 3,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,x y z,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,the quick brown fox,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,hello world,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,. . .,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,and the,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,i am,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,one two three,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,0.0,0,| ;?! ।...,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,2.0,0,( ),localized-aperiodic,0.156,0.168,17.7,0.131,0,0.0,0.723
+bert-base-uncased,2.0,0,( ) ( ),localized-aperiodic,0.266,0.232,30.4,0.126,0,0.0,0.526
+bert-base-uncased,2.0,0,[ ],localized-aperiodic,0.297,0.224,29.9,0.259,0,0.0,0.533
+bert-base-uncased,2.0,0,{ },OSC p4,0.359,0.274,30.7,0.35,4,0.0,0.521
+bert-base-uncased,2.0,0,( a ),localized-aperiodic,0.344,0.321,30.1,0.387,0,0.0,0.529
+bert-base-uncased,2.0,0,a b a b,localized-aperiodic,0.266,0.27,30.2,0.315,0,0.0,0.528
+bert-base-uncased,2.0,0,0 1 0 1,localized-aperiodic,0.219,0.261,30.5,0.303,0,0.0,0.524
+bert-base-uncased,2.0,0,yes no,localized-aperiodic,0.281,0.226,29.9,0.253,0,0.0,0.533
+bert-base-uncased,2.0,0,a a b,localized-aperiodic,0.219,0.245,29.9,0.303,0,0.0,0.532
+bert-base-uncased,2.0,0,1 2 3,localized-aperiodic,0.297,0.219,29.8,0.248,0,0.0,0.535
+bert-base-uncased,2.0,0,x y z,unbounded/aperiodic,0.234,0.26,32.9,0.343,0,0.0,0.486
+bert-base-uncased,2.0,0,the quick brown fox,OSC p4,0.375,0.355,33.0,0.437,4,0.0,0.484
+bert-base-uncased,2.0,0,hello world,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,2.0,0,. . .,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,2.0,0,and the,localized-aperiodic,0.234,0.234,31.0,0.285,0,0.0,0.515
+bert-base-uncased,2.0,0,i am,localized-aperiodic,0.141,0.269,30.3,0.307,0,0.0,0.527
+bert-base-uncased,2.0,0,one two three,OSC p4,0.375,0.335,28.4,0.412,4,0.0,0.557
+bert-base-uncased,2.0,0,| ;?! ।...,OSC p4,0.391,0.367,29.0,0.46,4,0.0,0.547
+bert-base-uncased,2.0,3,( ),localized-aperiodic,0.281,0.302,30.6,0.438,0,0.0,0.522
+bert-base-uncased,2.0,3,( ) ( ),localized-aperiodic,0.234,0.229,31.0,0.336,0,0.0,0.516
+bert-base-uncased,2.0,3,[ ],localized-aperiodic,0.234,0.223,27.7,0.33,0,0.0,0.568
+bert-base-uncased,2.0,3,{ },localized-aperiodic,0.219,0.22,30.0,0.328,0,0.0,0.532
+bert-base-uncased,2.0,3,( a ),OSC p8,0.156,0.176,18.8,0.264,8,0.0,0.707
+bert-base-uncased,2.0,3,a b a b,localized-aperiodic,0.188,0.223,29.7,0.327,0,0.0,0.536
+bert-base-uncased,2.0,3,0 1 0 1,localized-aperiodic,0.188,0.218,30.5,0.328,0,0.0,0.524
+bert-base-uncased,2.0,3,yes no,localized-aperiodic,0.281,0.228,31.7,0.348,0,0.0,0.505
+bert-base-uncased,2.0,3,a a b,localized-aperiodic,0.219,0.219,30.1,0.316,0,0.0,0.529
+bert-base-uncased,2.0,3,1 2 3,localized-aperiodic,0.219,0.229,30.4,0.322,0,0.0,0.524
+bert-base-uncased,2.0,3,x y z,localized-aperiodic,0.219,0.237,30.5,0.359,0,0.0,0.524
+bert-base-uncased,2.0,3,the quick brown fox,localized-aperiodic,0.266,0.231,31.0,0.335,0,0.0,0.515
+bert-base-uncased,2.0,3,hello world,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,2.0,3,. . .,DEAD,0.0,0.0,0.0,0.0,1,-2.0,0.0
+bert-base-uncased,2.0,3,and the,OSC p4,0.312,0.323,33.3,0.485,4,0.0,0.48
+bert-base-uncased,2.0,3,i am,localized-aperiodic,0.297,0.257,30.9,0.371,0,0.0,0.517
+bert-base-uncased,2.0,3,one two three,localized-aperiodic,0.219,0.236,29.9,0.358,0,0.0,0.533
+bert-base-uncased,2.0,3,| ;?! ।...,localized-aperiodic,0.234,0.228,30.4,0.34,0,0.0,0.524
+distilroberta-base,0.0,0,( ),FILL,1.0,0.998,62.9,0.235,14,0.0,0.0
+distilroberta-base,0.0,0,( ) ( ),FILL,1.0,1.0,63.0,0.504,4,0.0,0.0
+distilroberta-base,0.0,0,[ ],FILL,1.0,1.0,63.0,0.395,4,0.0,0.0
+distilroberta-base,0.0,0,{ },FILL,1.0,1.0,63.0,0.31,14,0.0,0.0
+distilroberta-base,0.0,0,( a ),FILL,1.0,1.0,63.0,0.441,0,0.0,0.0
+distilroberta-base,0.0,0,a b a b,FILL,1.0,1.0,63.0,0.227,14,0.0,0.0
+distilroberta-base,0.0,0,0 1 0 1,FILL,1.0,1.0,63.0,0.294,14,0.0,0.0
+distilroberta-base,0.0,0,yes no,FILL,1.0,1.0,63.0,0.349,14,0.0,0.0
+distilroberta-base,0.0,0,a a b,FILL,1.0,0.999,62.9,0.245,14,0.0,0.0
+distilroberta-base,0.0,0,1 2 3,FILL,1.0,1.0,63.0,0.31,14,0.0,0.0
+distilroberta-base,0.0,0,x y z,FILL,1.0,1.0,63.0,0.305,4,0.0,0.0
+distilroberta-base,0.0,0,the quick brown fox,FILL,1.0,1.0,63.0,0.348,4,0.0,0.0
+distilroberta-base,0.0,0,hello world,FILL,1.0,1.0,63.0,0.349,14,0.0,0.0
+distilroberta-base,0.0,0, Comments Related Posts,FILL,1.0,1.0,63.0,0.294,14,0.0,0.0
+distilroberta-base,0.0,0, Reply Cancel Save,FILL,1.0,1.0,63.0,0.285,14,0.0,0.0
+distilroberta-base,0.0,0, Next Previous,FILL,1.0,0.998,62.9,0.275,14,0.0,0.0
+distilroberta-base,0.0,0,Sharecomments###advertisementAdvertisement.,FILL,1.0,1.0,63.0,0.301,4,0.0,0.0
+distilroberta-base,2.0,0,( ),FILL,1.0,1.0,63.0,0.484,6,0.0,0.0
+distilroberta-base,2.0,0,( ) ( ),FILL,1.0,1.0,63.0,0.664,4,0.0,0.0
+distilroberta-base,2.0,0,[ ],FILL,1.0,0.999,62.9,0.521,0,0.0,0.0
+distilroberta-base,2.0,0,{ },FILL,1.0,0.995,62.7,0.522,6,0.0,0.0
+distilroberta-base,2.0,0,( a ),FILL,1.0,1.0,63.0,0.358,4,0.0,0.0
+distilroberta-base,2.0,0,a b a b,FILL,1.0,1.0,63.0,0.37,12,0.0,0.0
+distilroberta-base,2.0,0,0 1 0 1,FILL,1.0,1.0,63.0,0.34,8,0.0,0.0
+distilroberta-base,2.0,0,yes no,FILL,1.0,1.0,63.0,0.25,2,0.0,0.0
+distilroberta-base,2.0,0,a a b,FILL,1.0,1.0,63.0,0.328,2,0.0,0.0
+distilroberta-base,2.0,0,1 2 3,FILL,1.0,1.0,63.0,0.596,12,0.0,0.0
+distilroberta-base,2.0,0,x y z,FILL,1.0,1.0,63.0,0.611,4,0.0,0.0
+distilroberta-base,2.0,0,the quick brown fox,FILL,1.0,1.0,63.0,0.629,8,0.0,0.0
+distilroberta-base,2.0,0,hello world,FILL,1.0,1.0,63.0,0.654,0,0.0,0.0
+distilroberta-base,2.0,0, Comments Related Posts,FILL,1.0,1.0,63.0,0.326,6,0.0,0.0
+distilroberta-base,2.0,0, Reply Cancel Save,FILL,1.0,1.0,63.0,0.508,4,0.0,0.0
+distilroberta-base,2.0,0, Next Previous,FILL,1.0,1.0,63.0,0.5,4,0.0,0.0
+distilroberta-base,2.0,0,Sharecomments###advertisementAdvertisement.,FILL,1.0,1.0,63.0,0.5,2,0.0,0.0
+distilroberta-base,2.0,3,( ),FILL,0.781,0.749,59.9,0.881,0,0.0,0.065
+distilroberta-base,2.0,3,( ) ( ),FILL,0.688,0.748,60.0,0.867,0,0.0,0.063
+distilroberta-base,2.0,3,[ ],FILL,0.844,0.749,60.3,0.895,0,0.0,0.057
+distilroberta-base,2.0,3,{ },FILL,0.766,0.748,60.1,0.885,0,0.0,0.06
+distilroberta-base,2.0,3,( a ),FILL,0.703,0.749,60.0,0.868,8,0.0,0.062
+distilroberta-base,2.0,3,a b a b,FILL,0.781,0.748,60.2,0.894,0,0.0,0.059
+distilroberta-base,2.0,3,0 1 0 1,FILL,0.719,0.746,59.8,0.88,0,0.0,0.065
+distilroberta-base,2.0,3,yes no,FILL,0.781,0.747,60.2,0.882,0,0.0,0.059
+distilroberta-base,2.0,3,a a b,FILL,0.781,0.747,60.2,0.854,0,0.0,0.06
+distilroberta-base,2.0,3,1 2 3,FILL,0.703,0.747,59.4,0.88,0,0.0,0.073
+distilroberta-base,2.0,3,x y z,FILL,0.781,0.748,60.1,0.874,0,0.0,0.061
+distilroberta-base,2.0,3,the quick brown fox,FILL,0.797,0.748,60.2,0.891,0,0.0,0.059
+distilroberta-base,2.0,3,hello world,FILL,0.766,0.748,60.1,0.891,0,0.0,0.062
+distilroberta-base,2.0,3, Comments Related Posts,FILL,0.75,0.746,60.1,0.878,0,0.0,0.061
+distilroberta-base,2.0,3, Reply Cancel Save,FILL,0.781,0.747,60.2,0.854,0,0.0,0.06
+distilroberta-base,2.0,3, Next Previous,FILL,0.797,0.747,59.9,0.886,0,0.0,0.064
+distilroberta-base,2.0,3,Sharecomments###advertisementAdvertisement.,FILL,0.656,0.747,60.0,0.885,0,0.0,0.062

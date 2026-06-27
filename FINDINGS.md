@@ -872,6 +872,58 @@ locally. Key refs added: 2502.15208 (ACL 2025), 1902.04094, 1904.09324, 2503.008
 (NAACL 2025), 2310.10226, 2510.22954 (NeurIPS 2025), 2509.26643 (EMNLP 2025),
 1901.07729 (*Chaos* 2019).
 
+## 21. Seed engineering in the local rule: seeds nucleate bounded structure, but still no free life-form
+
+`scripts_seed_hunt.py`, `scripts_seed_Lrobust.py`, `results/seed_hunt.csv`,
+`results/seedhunt_*.txt`. Tests the hypothesis licensed by §8: because the
+local/masked rule is *chaotic* (it remembers its seed) whereas the causal rule
+*synchronizes* (it erases any seed — §15's frequency filter), an **engineered
+seed** — a local fixed point, *self-predictive inside* and *predicts-dead at its
+boundary* — might nucleate a bounded, persistent, L-robust life-form where random
+or single-cell seeds (§14) only fizzle. Local windowed-ring (`w=2`, `T=0`,
+absorbing, local overpopulation penalty), across CodeBERTa / bert-base /
+distilroberta × penalty/refractory × ~17 seed families (brackets, attractor
+tokens, periodic motifs, asymmetric, controls), with a glider detector
+(period-up-to-ring-translation). Three findings, one law.
+
+**1. Life needs a *non-spreading* local conditional — only bert-base qualifies.**
+CodeBERTa (code) and distilroberta (web boilerplate) *flood* the lattice from
+almost any seed (ρ_live → 1): their attractor tokens are mutually predictive in a
+way that spreads — every `(` predicts more code, every `Comments` predicts more
+chrome. Only **bert-base** (dead token `.`, a sparse punctuation/filler genre)
+supports bounded structures, and only with the local penalty (`freq_penalty≈2.0`);
+at penalty 0 its seeds die to vacuum. The local rule hosts structure only when the
+model's own local conditional is not a spreader.
+
+**2. The seed selects the structure (the hypothesis, confirmed — narrowly).**
+Within bert+penalty the *seed tokens* pick the outcome: `( a )` → a period-8
+oscillator, `one two three` / `{ }` → period-4, `( )` → a bounded blob. The decoded
+grids show a **"breathing" parenthesis oscillator** — a localized ~20-cell band
+alternating rows of `(` and rows of `)` on a dead `.` background, holding 150+
+generations. The seed is *remembered* (the local rule is chaotic, §8), so different
+tokens nucleate different bounded patterns — exactly the seed-dependence the causal
+rule erases.
+
+**3. But they are lattice-commensurate standing waves, not free life-forms — and
+nothing translates.** The decisive test (vary L, hold the seed): a free life-form
+keeps the same bounded support and period at *every* L. It does not. The clean
+oscillators appear only at commensurate L (`( a )` period-8 at L=64 only; `( )`
+period-4 at L=56, period-12 at L=96; `one two three` period-4 at L=64 only); at
+other L the same seed gives a bounded-but-aperiodic churning blob, fills, or dies.
+And **no seed — including asymmetric ones built for it, with the Brian's-Brain
+refractory that makes structure travel — produced a translating (v≠0) structure**:
+every detected period had velocity 0. No glider.
+
+**Conclusion.** Seed engineering confirms the narrow hypothesis — the right tokens,
+in the chaotic local rule, nucleate bounded persistent localized structure that the
+causal rule would erase — but hits the same wall as §14: the LLM's *smooth,
+high-entropy* local conditional lacks Conway's knife-edge `B3/S23` balance, so its
+localized structures are **commensurate resonances pinned to L, not free objects**,
+and a spaceship (which needs the leading edge to advance at exactly the rate the
+trailing edge vacates) does not form. **The seed controls *which* resonance, not
+*whether* a free life-form exists.** The missing ingredient is still a fine-tuned
+local birth/death balance — not a better seed.
+
 ## 11. Next steps
 
 1. **Local-neighborhood rule (the headline follow-up).** Restrict each site to
