@@ -24,7 +24,12 @@ def load(model_name: str, device: str):
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     tok = AutoTokenizer.from_pretrained(model_name)
-    dtype = torch.float32 if device == "cpu" else torch.float16
+    if device == "cpu":
+        dtype = torch.float32
+    elif "gemma" in model_name.lower():
+        dtype = torch.bfloat16  # Gemma is bf16-native; fp16 overflows its activations to NaN
+    else:
+        dtype = torch.float16
     model = AutoModelForCausalLM.from_pretrained(model_name, dtype=dtype)
     model.to(device)
     model.eval()

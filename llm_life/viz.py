@@ -20,8 +20,16 @@ def embedding_rgb_table(embedding_matrix: np.ndarray) -> np.ndarray:
     # don't propagate NaN/Inf into the colour table (which blanks the image).
     X = np.nan_to_num(embedding_matrix.astype(np.float64), nan=0.0, posinf=0.0, neginf=0.0)
     X = X - X.mean(axis=0, keepdims=True)
-    # top-3 right singular vectors
-    _, _, Vt = np.linalg.svd(X, full_matrices=False)
+    # top-3 right singular vectors. For huge vocab x dim matrices (e.g. gemma-4's
+    # 262144 x 3840) a full economy SVD is slow and memory-heavy, so fit the PCA
+    # axes on a random row sample and project every row onto them -- statistically
+    # identical for the top components, a fraction of the cost.
+    if X.shape[0] > 60000:
+        rng_ = np.random.default_rng(0)
+        sample = X[rng_.choice(X.shape[0], 60000, replace=False)]
+        _, _, Vt = np.linalg.svd(sample, full_matrices=False)
+    else:
+        _, _, Vt = np.linalg.svd(X, full_matrices=False)
     proj = np.nan_to_num(X @ Vt[:3].T)  # (V, 3)
     lo = proj.min(axis=0, keepdims=True)
     hi = proj.max(axis=0, keepdims=True)

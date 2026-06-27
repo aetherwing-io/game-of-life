@@ -77,7 +77,8 @@ def _build(args):
         model, tok, device = load(args.model, device)
         bos = tok.bos_token_id if tok.bos_token_id is not None else tok.eos_token_id
         dead = dead_token_id(model, tok, bos, device)
-        vocab = model.config.vocab_size
+        # multimodal/unified configs (e.g. gemma4_unified) nest vocab under text_config
+        vocab = getattr(model.config, "vocab_size", None) or model.config.text_config.vocab_size
         auto = LLMAutomaton(model, dead_token=dead, bos_token=bos, device=device)
         extra = {"arch": "causal", "model": args.model}
 

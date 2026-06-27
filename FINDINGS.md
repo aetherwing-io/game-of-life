@@ -10,12 +10,14 @@ the newer variants). **Seeds:** 3 in the sweeps; **n=1 in most of §16–19**.
 **Hardware:** CPU / Apple MPS. Raw numbers in `results/*.csv`; figures in
 `results/`.
 
-> **Scope (added after external review, §20):** every model tested is **≤2B
-> params**, and small models are known to degenerate more readily and to behave
-> differently from large ones (e.g. arXiv 2509.26643 finds a minimum scale for
-> stable token distributions). Read the headline as *"for small (≤2B) base models
-> under this synchronous map,"* not as a claim about LLMs in general. The §16–19
-> single-run τ_int/ξ magnitudes are transient, not steady-state (§1, §20).
+> **Scope (added after external review, §20).** Most models tested are **≤1.7B
+> params**, where small models are known to degenerate more readily (e.g. arXiv
+> 2509.26643 finds a minimum scale for stable token distributions) — so read the
+> bulk of the headline as *"for small base models under this synchronous map."*
+> The one large data point, **gemma-4-12B (§22), shows the same ξ=1 / no-edge
+> behaviour**, so the negative now extends to 12B; but a systematic scale sweep is
+> still missing. The §16–19 single-run τ_int/ξ magnitudes are transient, not
+> steady-state (§1, §20).
 
 ## TL;DR
 
@@ -763,7 +765,9 @@ checkpoint's training, and even same-arch/same-scale checkpoints differ sharply.
 
 **Ground-state catalogue** (argmax from BOS — a tokenizer/training fingerprint):
 GPT-2 `\n`, distilroberta `Advertisements`, pythia/RWKV/Mamba `Q` (Pile/NeoX),
-Bonsai-1.7B `:`, Qwen3-1.7B-Base `Human` (= Qwen2.5-base, §13), Bonsai-8B `' '`.
+Bonsai-1.7B `:`, Qwen3-1.7B-Base `Human` (= Qwen2.5-base, §13), Bonsai-8B `' '`,
+and — qualitatively different — **gemma-4-12B `<image|>`** (a *multimodal* token,
+not a word; §22).
 
 The method working as intended: the controls killed two tidy generalizations and
 left the defensible core — the absorbing drift is rule-universal, and the soft-T=0
@@ -923,6 +927,46 @@ and a spaceship (which needs the leading edge to advance at exactly the rate the
 trailing edge vacates) does not form. **The seed controls *which* resonance, not
 *whether* a free life-form exists.** The missing ingredient is still a fine-tuned
 local birth/death balance — not a better seed.
+
+## 22. gemma-4-12B: a *multimodal* ground state — the thesis confirmed at 12B
+
+`results/spacetime_causal_gemma-4-12B_*`, `tokens_causal_gemma-4-12B_*`. The
+largest and most architecturally exotic model in the study: **google/gemma-4-12B**,
+the `gemma4_unified` *any-to-any multimodal* base model (vision + audio + text,
+12B, bf16). Loaded via its text-only causal head `Gemma4UnifiedForCausalLM` (666 of
+677 weights are the `language_model.*` decoder; needs transformers ≥ the
+gemma4_unified release). `--arch causal`, L=64. The §16–20 thesis predicts the
+*dynamical repertoire* (freeze / active / no-edge-of-chaos) is invariant to
+architecture and scale while only the attractor *content* shifts with training.
+gemma-4 confirms both halves, with one genuinely new twist.
+
+- **The ground state is a *multimodal* token.** Dead token (argmax from BOS) =
+  **`<image|>`** (id 258882) — not a word. From an empty context, an any-to-any
+  model's single most likely token is the image placeholder. This is qualitatively
+  new in the ground-state catalogue (GPT-2 `\n`, distilroberta `Advertisements`,
+  Pile-family `Q`, Qwen `Human`, Bonsai `:` — all word/structural tokens; gemma's
+  is a **modality** token): the unconditional dynamics read out that the model
+  "expects" multimodal input when given nothing.
+- **It freezes to that ground state — the strongest freeze observed.** Soft
+  single-cell T=0: the seed cell is erased by **g1** and the whole lattice is
+  `<image|>` thereafter (ρ=0.0002, live=0.0). gemma's ground state is so dominant
+  one forward pass wipes any seed — the cleanest instance of §8's causal
+  synchronization / §15's frequency filter (the seed is forgotten immediately).
+- **Full repertoire, no edge of chaos.** Random init, soft T=0.7: a normal
+  active/disordered regime (ρ=0.87, entropy 3.5 bits, **ξ=1** — no spatial
+  structure, exactly like every full-attention model). The active genre is a
+  web/markup fingerprint — HTML tags (`<h1> <b> </b> <strong>`), edit/user chrome,
+  numbers, occasional Chinese — gemma's training mix.
+
+**Conclusion.** The biggest (12B vs the others' ≤1.7B), newest, most exotic
+(multimodal vs text) model behaves exactly as §16–20 predict: identical dynamical
+repertoire (freeze + active, ξ=1, no Class-4 band), with the attractor set by
+training — here a *multimodal* ground state and a web/markup active genre.
+Architecture, scale, and modality change the attractor's *content*, not the
+dynamics. The fresh note is conceptual: an any-to-any model's unconditional CA
+ground state is a *modality* token — a compact readout of what the model expects
+from nothing. *Caveat:* single seeds; the text head drops the vision/audio towers,
+so this is gemma-4's text backbone, not the full multimodal model.
 
 ## 11. Next steps
 
