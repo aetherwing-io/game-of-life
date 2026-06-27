@@ -37,5 +37,7 @@ results/*.csv
 !results/complexity_plane.png
 !results/complexity_plane.csv
 !results/glider_filter_localTE.png
+!results/complexity_scaling.png
+!results/complexity_scaling.csv
 # keep decoded token grids
 !results/tokens_*.txt

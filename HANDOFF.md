@@ -166,9 +166,14 @@ LLM regime placed on the plane (`scripts_complexity_plane.py`,
 `results/complexity_plane.png`) lands **outside** the Class-4 corner: causal →
 chaos/structureless, masked random-init → saturated fill (origin), sparse bert
 "lifeforms" → the **Class-2** region (rule-184 neighbourhood), confirming §14/§21.
-Remaining: a finite-size `E(L)` scaling, and the **MI-peak-at-Langton-λ_c** sweep
-(vary the rule's activity λ and look for the E peak; cond-mat/9409080) — the one
-piece of the canonical picture still not swept.
+The finite-size `E(L)` scaling (`scripts_complexity_scaling.py`,
+`results/complexity_scaling.png`) firms this up: the class discrimination is
+**`L`-stable** (rule-110 high, rule-30 exactly 0, across `L=32…256`), and the bert
+"lifeform" is **`L`-commensurate** (`E` swings 0.04→0.98 non-monotonically with
+`L`) — the standing-wave fingerprint, vs causal's flat-low `E` at all `L`.
+Remaining: the **MI-peak-at-Langton-λ_c** sweep (vary the rule's activity λ and
+look for the E peak; cond-mat/9409080) — the one piece of the canonical picture
+still not swept.
 
 ## Final thought for next
 

@@ -1212,6 +1212,33 @@ to edge" structure is, on this instrument, token-identity order on a saturated
 background; the sparse bert "lifeforms" are Class-2 standing waves. Rule 110 sits
 alone at the edge.
 
+**Finite-size scaling `E(L)` (firm-up).** `scripts_complexity_scaling.py`,
+`results/complexity_scaling.{csv,png}`. Two questions the caveats flagged.
+
+*(A) Is the discrimination `L`-stable, or a finite-size confound* — the exact
+failure mode that sank `τ_int`/`ξ`? Across `L = 32…256` the excess entropy
+separates the classes **at every size**: rule 110/54 (Class 4) stay high
+(≈1.2–3.1 bits), rule 30 (Class 3) is **exactly 0.00 at every `L`**, rule 184
+(Class 2) ≈0.9–1.4. The Class-4 rules' `E` neither vanishes nor diverges with `L`
+— it fluctuates around a stable nonzero value, the signature of a *free* structure
+(gliders are `L`-independent objects). The diagnostic is robust where `τ_int`/`ξ`
+were not.
+
+*(B) Is the sparse bert "lifeform" a free structure or a commensurate standing
+wave?* This is the decisive test, and on the validated instrument it confirms
+§14/§21: the bert oscillator's `E(L)` is **strongly `L`-sensitive and
+non-monotonic** — `E ≈ 0.04 (L=40) → 0.82 (L=64) → 0.28 (L=96) → 0.98 (L=128)`,
+with its live fraction swinging `0.06–0.69` — whereas a *free* life-form would hold
+the same `E` and the same bounded support at every `L`. It only "fits" (sparse,
+structured) at commensurate sizes and floods or fizzles elsewhere. The causal
+active control, by contrast, is **flat and low** (`E ≈ 0.02–0.16` across `L`,
+`live ≈ 0.9`) — robustly structureless at every size — and rule 110 is robustly
+*high* at every size. The bert structure is neither: its `E` wanders with `L`, the
+quantitative fingerprint of a **lattice-commensurate standing wave**, not a free
+glider-like object — and even at its best `L` it stays below rule 110's matched-`L`
+`E`. This is §14/§21's "commensurate standing waves, not free life-forms,"
+now measured on a Class-validated complexity scale.
+
 *Caveats.* (1) The live/dead binarization is the right coarse-graining for the
 glider/activity question and makes LLM fields commensurate with binary CAs, but it
 discards token-identity structure — dense token-ordered fills (masked T=1.2, the
@@ -1219,8 +1246,9 @@ discards token-identity structure — dense token-ordered fills (masked T=1.2, t
 carrying real token structure (reported via token `I(1)`); a glider, however, is
 an activity-geometry object, so this is the relevant axis. (2) `E`/`h_μ` at
 `L=120`, post-burn, 2–3 seeds (seeded sparse runs are deterministic, n=1); the
-bias-corrected `E` is stable but these are not infinite-`L` extrapolations — a
-finite-size `E(L)` scaling is the natural firm-up. (3) This measures the spatial
+finite-size `E(L)` scaling (above) shows the class discrimination is `L`-stable
+(32→256) and the bert structure is `L`-commensurate, though absolute `E` for the
+reference Class-4 rules fluctuates seed-to-seed at small `L`. (3) This measures the spatial
 complexity of the realized orbit, not a proof of (non-)universality. Refs:
 Langton 1990 (*Physica D*); Crutchfield & Feldman 2003 (*Chaos*, "Regenerating
 information"); Lizier, Prokopenko & Zomaya 2008 (local information transfer,
