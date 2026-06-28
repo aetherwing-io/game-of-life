@@ -1,0 +1,4 @@
+data_level_T_train_over_P,steps,n_seeds,MC_total,MC_kge1,note
+4.9,3000,3,0.416,0.123,lock (scripts_capacity_lock.py)
+11.0,7000,3,0.478,0.157,E3 headline (scripts_mc_gate.py)
+20.0,12517,1,0.519,0.181,partial plateau probe (1 seed; run killed before 3-seed completion)
