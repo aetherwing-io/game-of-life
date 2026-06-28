@@ -1537,8 +1537,10 @@ signal.
 (G3/G4 re-license), `scripts_degree_floor.py` (degree-stratified floor),
 `scripts_capacity_vs_lag.py` (capacity-vs-lag-by-degree + perturbation decay),
 `scripts_ipc_control.py`, `scripts_reservoir_robust.py`, `scripts_crossarch.py`.
-Data: `results/reservoir_{esp,mc,ipc}_*`,
+Data: `results/reservoir_esp_*` (the α-railed `reservoir_mc_*`/`reservoir_ipc_*` were
+removed as superseded — the canonical artifacts are the `capacity_*` set below),
 `results/capacity_lock_pythia-160m_L48_nin2_K8.{raw,summary,configs}.csv` + `.png`,
+`results/capacity_{mc_gated,ipc_gated,degree_floor,gate_validation}_*`,
 `results/capacity_vs_lag_pythia160m_L48.{csv,png}`,
 `results/capacity_{perturbation_decay,lag1_vs_distance}_pythia160m_L48.csv`,
 `results/crossarch_capacity.{csv,png}`.

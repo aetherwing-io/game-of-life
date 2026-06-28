@@ -233,6 +233,9 @@ def effective_rank(X: np.ndarray) -> int:
 
 
 def cmd_mc(args):
+    # SUPERSEDED — this CLI produced the α-railed results/reservoir_mc_* artifacts.
+    # The canonical, locked MC/IPC pipeline is scripts_capacity_lock.py + llm_life/capacity.py
+    # (wide-α + encoded-symbol Gram-Schmidt basis). Kept for provenance; see FINDINGS §25.
     auto, tok, model, dev, vocab, dead, emb = build_causal(args.model, args.device)
     L = args.length
     table = rz.pca_readout_table(emb, args.k)
@@ -439,6 +442,8 @@ def _ipc_one(name, X, u, sp, args):
 
 
 def cmd_ipc(args):
+    # SUPERSEDED — α-railed; canonical IPC is scripts_capacity_lock.py + llm_life/capacity.py
+    # (wide-α + encoded-symbol GS basis + degree-stratified floor). See FINDINGS §25.
     # calibration first: shift-register IPC must be degree-1 ~ N, degree>=2 ~ 0
     if args.calibrate:
         print("[calibrate] literal shift register (degree-1 should ~ N, higher ~ 0):")

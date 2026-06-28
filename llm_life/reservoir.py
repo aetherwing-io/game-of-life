@@ -289,7 +289,12 @@ def memory_capacity(
     kmax: int,
     alphas=(1e-4, 1e-3, 1e-2, 1e-1, 1.0, 10.0, 100.0),
 ) -> dict:
-    """Linear Memory Capacity (Jaeger 2002).
+    """SUPERSEDED — α-railed (narrow grid, max 100). The canonical estimator is
+    ``llm_life.capacity.memory_capacity`` (wide-α 1e-6…1e8 + interiority assert,
+    encoded-symbol Gram-Schmidt basis); see FINDINGS §25. Kept for provenance only —
+    its grid pinned at the maximum, under-counting capacity (MC 0.23→0.41 once widened).
+
+    Linear Memory Capacity (Jaeger 2002).
 
     For each lag ``k`` in ``0..kmax`` fit a ridge readout from the reservoir
     feature ``X(t)`` to the past input ``u(t-k)``; ``MC_k`` is the **test** R^2.
@@ -426,7 +431,11 @@ def information_processing_capacity(
     surrogate_quantile: float = 0.999,
     rng_seed: int = 0,
 ) -> dict:
-    """Dambre IPC with a surrogate-calibrated significance threshold.
+    """SUPERSEDED — α-railed + Legendre (continuous-u) basis. The canonical estimator
+    is ``llm_life.capacity.information_processing_capacity`` (wide-α + encoded-symbol
+    Gram-Schmidt basis + degree-stratified floor); see FINDINGS §25. Provenance only.
+
+    Dambre IPC with a surrogate-calibrated significance threshold.
 
     For every config (up to the degree/delay/vars caps) compute the linear
     readout test R^2; keep only capacities above ``threshold`` and sum. The
