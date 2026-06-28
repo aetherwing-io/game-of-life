@@ -1,4 +1,5 @@
 check,pass,detail
+basis_orthonormal_Gram==I,1,max|G-I|=5.13e-16
 G3a_shiftreg_MC==N,1,25.000 vs 25
 G3a_alpha_not_at_max,1,0
 G3b_symbolIPC_total==N,1,25.000 vs 25

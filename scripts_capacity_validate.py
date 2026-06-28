@@ -76,7 +76,9 @@ print(f"   off-target leakage above max-threshold = {leak:.3f} (expect ~0)")
 d1 = s["per_degree"].get(1, 0.0); d2 = s["per_degree"].get(2, 0.0); d3 = s["per_degree"].get(3, 0.0)
 min_cap = min(capmap.get(tuple(c), 0.0) for c in SIGNAL)
 checks = {
-    "G3a_shiftreg_MC==N":        (abs(g3a_mc - N) < 0.05, f"{g3a_mc:.3f} vs {N}"),
+    "basis_orthonormal_Gram==I": (bool(np.allclose(G, np.eye(5), atol=1e-6)),
+                                  f"max|G-I|={np.abs(G - np.eye(5)).max():.2e}"),
+    "G3a_shiftreg_MC==N":        (abs(g3a_mc - N) < 0.05 * N, f"{g3a_mc:.3f} vs {N}"),
     "G3a_alpha_not_at_max":      (mc["alpha_at_max_signif"] == 0 if "alpha_at_max_signif" in mc
                                   else True, str(mc.get("alpha_at_max_signif", "n/a"))),
     "G3b_symbolIPC_total==N":    (abs(g3b_total - N) < 0.1, f"{g3b_total:.3f} vs {N}"),
@@ -95,12 +97,27 @@ for name, (ok, detail) in checks.items():
     print(f"  [{'PASS' if ok else 'FAIL'}] {name}  ({detail})")
     if not ok:
         failed.append(name)
-import csv as _csv, os as _os
+import csv as _csv, os as _os, datetime as _dt
 _os.makedirs("results", exist_ok=True)
 with open(_os.path.join("results", "capacity_gate_validation.csv"), "w", newline="") as _f:
     _w = _csv.writer(_f); _w.writerow(["check", "pass", "detail"])
     for name, (ok, detail) in checks.items():
         _w.writerow([name, int(ok), detail])
-print("[wrote] results/capacity_gate_validation.csv")
+# durable human-readable report (closes the "calibration lives only in stdout" nit)
+_txt = ["G3/G4 gate re-license — scripts_capacity_validate.py",
+        f"generated: {_dt.datetime.now().isoformat(timespec='seconds')}  (synthetic, CPU-only)",
+        f"basis Gram (5x5, should be I):\n{np.round(G, 4)}",
+        f"[G3a] shift-register N={N}: MC={g3a_mc:.4f} (expect ~{N}), alpha_at_max_signif={mc['alpha_at_max_signif']}",
+        f"[G3b] symbol-IPC total={g3b_total:.4f} (expect ~{N}), nonlinear-temporal={g3b_d2:.4f} (expect ~0)",
+        f"[G4]  total={s['total']:.4f} (expect {len(SIGNAL)}), degree d1={d1:.3f}/d2={d2:.3f}/d3={d3:.3f} "
+        f"(expect 2/4/1), inst={s['inst_total']:.3f}/temporal={s['temporal_total']:.3f} (expect 3/4), "
+        f"min constructed cap={min_cap:.4f} (expect >0.95), off-target leakage={leak:.4f} (expect ~0)",
+        "", "REGRESSION ASSERTS:"]
+for name, (ok, detail) in checks.items():
+    _txt.append(f"  [{'PASS' if ok else 'FAIL'}] {name}  ({detail})")
+_txt.append(f"\nVERDICT: {'ALL PASS' if not failed else 'FAILED: ' + ', '.join(failed)}")
+with open(_os.path.join("results", "capacity_gate_validation.txt"), "w") as _f:
+    _f.write("\n".join(_txt) + "\n")
+print("[wrote] results/capacity_gate_validation.{csv,txt}")
 assert not failed, f"GATE REGRESSION FAILED: {failed}"
-print("ALL GATES PASS (G3a/G3b/G4 regression-asserted).")
+print("ALL GATES PASS (basis-orthonormality + G3a/G3b/G4 regression-asserted).")
