@@ -1367,26 +1367,26 @@ degree, since higher-degree targets have heavier tails and a single global floor
 under-catches structured bias — `scripts_degree_floor.py`) then sorts the
 remainder honestly:
 
-| degree | lag-1 temporal capacity (`T=0.3`) | genuine signal? |
+| degree | temporal capacity (`T=0.3`, per degree) | genuine signal? |
 |---|---:|---|
 | 1 (linear)    | 0.115 ± 0.002 | **yes** — clears its floor by a wide margin at both temps |
 | 2 (quadratic) | 0.031 ± 0.020 | no — seed-unstable (one outlier seed) |
-| 3 (cubic)     | 0.030 ± 0.004 | **no** — floor-height artifact (see below) |
-| 4 (quartic)   | 0.036 ± 0.004 | no — clears at `T=0.3`, **killed at `T=0.7`** (conceded bias) |
+| 3 (cubic)     | 0.030 ± 0.004 | **no** — bias (cross-temp instability + inverted profile; see below) |
+| 4 (quartic)   | 0.041 ± 0.004 | no — clears at `T=0.3`, **killed at `T=0.7`** (conceded bias) |
 
-The raw temporal profile *rises* with degree (`d2 < d3 < d4`: 0.031, 0.030, 0.036),
+The raw temporal profile *rises* with degree (`d2 < d3 < d4`: 0.038, 0.047, 0.062),
 the classic signature of high-degree finite-sample bias — a state with `MC_1 ≈ 0.1`
-cannot legitimately compute degree-4 temporal functions *better* than degree-2. The
-degree-stratified floor correctly kills degree-2 (seed-unstable) and degree-4
-(killed at `T=0.7`). Degree-3 appears to "survive," but that is a **floor-height
-artifact, not signal**: the surviving cubic (`d3 = 0.030`) and the conceded-bias
-quartic (`d4 = 0.036`) are the **same magnitude and equally seed-stable** — d3
-clears only because the degree-3 floor sits *below* 0.030 while the degree-4 floor
-sits *above* 0.036. The fate is set by floor height, not by the reservoir computing
-odd functions. Two further nails: the cubic **fails cross-temperature stability**
-(at `T=0.7` only 1 of 3 seeds clears even the agnostic floor), and the raw profile
-shows **no odd preference** (`d4 > d3`), so the tanh-ESN odd-symmetry analogy does
-not transfer (the LLM-CA has no such mechanism). So we license **no nonlinear
+cannot legitimately compute degree-4 temporal functions *better* than degree-2. At
+`T=0.3` the lenient per-degree floor lets degree-2, -3 **and** -4 all clear, so the
+floor does not single degree-3 out as signal; its apparent "survival" is exposed as
+bias on two independent grounds. (i) **Cross-temperature instability**: the cubic
+(`d3 = 0.030`) and the conceded-bias quartic (`d4 = 0.041`) are comparable in
+magnitude and both clear at `T=0.3`, but at `T=0.7` the cubic falls to a marginal
+`0.010` (at its `0.013` floor) and the quartic is **killed** (`0.000`). A genuine
+fading-memory capacity is stable across temperature; this is not. (ii) **No
+degree-decay, no odd preference**: capacity *rises* with degree and `d4 > d3` —
+neither the degree-decay a real nonlinearity shows nor the odd-symmetry of a
+tanh-ESN (the LLM-CA has no such mechanism). So we license **no nonlinear
 temporal computation**: the only computation over time is the weak lag-1 *linear*
 memory, dwarfed (~7×) by instantaneous nonlinear capacity. The feature matrix is
 **full rank** (eff-rank 368 = readout dim), so this is not rank starvation — the
