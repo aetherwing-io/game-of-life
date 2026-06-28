@@ -1,0 +1,3 @@
+temp,n_seeds,T_train_over_P,total_mean,total_std,inst_mean,inst_std,temporal_mean,temporal_std,d1t_mean,d1t_std,d2t_mean,d2t_std,d3t_mean,d3t_std,d4t_mean,d4t_std,floor1_mean,floor1_std,floor2_mean,floor2_std,floor3_mean,floor3_std,floor4_mean,floor4_std,a_at_max_mean,a_at_max_std
+0.3,3,11.0,1.276,0.0798,0.9513,0.0552,0.3246,0.0269,0.156,0.002,0.0374,0.0122,0.0691,0.0178,0.062,0.0083,0.0025,0.0007,0.0036,0.0013,0.0044,0.0011,0.0039,0.0002,0.0,0.0
+0.7,3,11.0,0.7394,0.0476,0.6332,0.0207,0.1062,0.0276,0.0674,0.0201,0.012,0.0066,0.0095,0.0083,0.0173,0.01,0.0026,0.0007,0.0037,0.001,0.0042,0.0003,0.0046,0.0001,0.0,0.0
