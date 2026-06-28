@@ -1390,6 +1390,39 @@ memory, dwarfed (~7×) by instantaneous nonlinear capacity. The feature matrix i
 input-controllable subspace is simply small, dominated by the shared-noise
 variance. Lower `T` helps monotonically.
 
+**Decodable vs dynamical memory — the headline test** (`scripts_capacity_vs_lag.py`,
+`results/capacity_vs_lag_pythia160m_L48.{csv,png}`). The §23 contraction sets up a
+discrepancy worth resolving head-on: initial-condition memory persists ~`t_sync`
+(40–87 steps, the ESP convergence above) yet linear input correlation hits the floor
+by lag ~2. Is the input at lags 2…`t_sync` in the state but encoded *nonlinearly*?
+We measured single-variable capacity of `P_d(u(t-k))` at every lag `k`, per degree,
+against the degree-stratified floor. The answer independently confirms the "no
+nonlinear temporal" verdict above: at `T=0.3` (3 seeds) linear, quadratic and cubic
+capacity **all decay together**, to their floors by lag ~2 (decodable horizons
+degree-1/2/3 = 2/1/2; at `T=0.7`, 1/1/1) — the nonlinear capacity does **not** reach
+deeper lags than the linear. The map does not "remember its input nonlinearly
+beyond its linear horizon."
+
+But a readout-free probe shows the input is not *gone*, only *scrambled*. Flipping a
+single input symbol (same init, same fixed noise) perturbs the reservoir for **~39
+steps** before the trajectories reconverge — first *amplifying* to ~34 of 46 sites
+over ~4 steps, then slowly contracting (the §4 amplify-then-synchronize signature),
+at both `T=0.3` and `T=0.7`. So there are **two memory timescales**: a *dynamical*
+(perturbation) horizon ~39 steps ≈ `t_sync`, and a *decodable* horizon ~1–2 steps.
+The gap between them is the characterization — the strongly-mixing causal map
+**entangles input history into a scrambled, high-dimensional state that is present
+for tens of steps but unrecoverable by a degree-≤3 embedding-PCA readout beyond
+lag ~2**. It does
+not forget the input quickly; it *scrambles* it quickly. (Distance check: the weak
+lag-1 decodable memory is *distributed* over the first ~16 reservoir sites next to
+the clamp — `first1 = 0.00`, peaking `first16 ≈ 0.12`, diluting to `first46 ≈ 0.09`
+— local propagation off the clamp, not a single-site copy.) This **locates** the map
+on the memory × nonlinearity plane: shallow decodable memory (depth ~1–2 at every
+degree), strong instantaneous nonlinearity, long dynamical persistence, low
+decodability — a consistent map that is a poor *practical* reservoir not because it
+is frozen or instantly forgetful, but because it mixes inputs into an undecodable
+state.
+
 **Input-leak control.** Reading `MC` off **only** the clamped input sites (which
 we exclude) gives `≈0.54` at the in-domain `T=0.3` (and falls toward `0.30` by
 `T=1`) — **entirely at lag 0** (`MC_1 ≈ 0`). So the trivial "read the input off its
@@ -1452,9 +1485,12 @@ signal.
 `scripts_reservoir.py` (`apparatus`/`esp`/`mc`/`ipc`), `scripts_capacity_lock.py`
 (licensed 3-seed run + α-interiority check), `scripts_capacity_validate.py`
 (G3/G4 re-license), `scripts_degree_floor.py` (degree-stratified floor),
+`scripts_capacity_vs_lag.py` (capacity-vs-lag-by-degree + perturbation decay),
 `scripts_ipc_control.py`, `scripts_reservoir_robust.py`, `scripts_crossarch.py`.
 Data: `results/reservoir_{esp,mc,ipc}_*`,
 `results/capacity_lock_pythia-160m_L48_nin2_K8.{raw,summary,configs}.csv` + `.png`,
+`results/capacity_vs_lag_pythia160m_L48.{csv,png}`,
+`results/capacity_{perturbation_decay,lag1_vs_distance}_pythia160m_L48.csv`,
 `results/crossarch_capacity.{csv,png}`.
 
 ## 11. Next steps

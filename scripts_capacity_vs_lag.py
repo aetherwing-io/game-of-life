@@ -184,8 +184,8 @@ def main():
             dist_rows.append({"temp": temp, "first_m_sites": m, "lag1_capacity_mean": float(np.mean(v))})
 
     os.makedirs(OUT, exist_ok=True)
-    for name, data in (("capacity_vs_lag", rows), ("perturbation_decay", decay_rows),
-                       ("lag1_vs_distance", dist_rows)):
+    for name, data in (("capacity_vs_lag", rows), ("capacity_perturbation_decay", decay_rows),
+                       ("capacity_lag1_vs_distance", dist_rows)):
         p = os.path.join(OUT, f"{name}_pythia160m_L{L}.csv")
         with open(p, "w", newline="") as f:
             w = csv.DictWriter(f, fieldnames=list(data[0].keys())); w.writeheader(); w.writerows(data)
