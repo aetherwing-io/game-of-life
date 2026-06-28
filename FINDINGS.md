@@ -1293,8 +1293,11 @@ and concatenates → a 368-dim real vector. The clamped input sites are **exclud
 from the readout.
 
 **Estimators and their gates** (`llm_life/capacity.py`).
-- **Memory Capacity** (Jaeger): `MC_k =` test-`R²` reconstructing `u(t-k)`;
-  `MC = Σ_k MC_k`.
+- **Memory Capacity** (Jaeger): `MC_k =` test-`R²` reconstructing the **encoded bin
+  index** `b(t-k) ∈ {0..15}` — the variable the reservoir actually receives — so
+  that degree-1 IPC `== MC` *exactly* (verified to machine precision) and the study
+  is self-consistent; `MC = Σ_k MC_k`. (MC over the encoded bin vs continuous `u`
+  differs only ~0.5% from quantization, so the headline magnitudes are unchanged.)
 - **Information Processing Capacity** (Dambre): capacity over an orthonormal basis
   of the input history — here the **encoded-symbol Gram-Schmidt basis**
   (orthonormal polynomials of the *binned* input symbol, matched to what the
@@ -1408,14 +1411,14 @@ beyond its linear horizon" at any degree (consistent with §25's verdict that th
 degree-≥2 temporal is finite-sample bias).
 
 But a readout-free probe shows the input is not *gone*, only *scrambled*. Flipping a
-single input symbol (same init, same fixed noise) perturbs the reservoir for **≳39
-steps** (the measurement window): one flip reaches ~14 of 46 sites in a *single*
-step (the §10 non-local full-attention spread), amplifies to ~32 by step ~6, then
-slowly contracts but is **still ~5/46 different at step 39** — a *lower bound*, not
-yet re-converged (the §4 amplify-then-synchronize signature), at both `T=0.3` and
-`T=0.7`. So there are **two memory timescales**: a *dynamical* (perturbation)
-horizon **≳39 steps** (≈ `t_sync`, still going at the window edge), and a
-*decodable* horizon ~1–2 steps.
+single input symbol (same init, same fixed noise) perturbs the reservoir for **tens
+of steps**: one flip reaches ~14 of 46 sites in a *single* step (the §10 non-local
+full-attention spread), amplifies to ~32 by step ~4–6, then slowly contracts — but
+is **still ~5/46 apart at the 39-step probe edge** (2.7/46 at `T=0.7`), reconverging
+to 0 only over the full `t_sync` horizon (40–87 steps; the §4
+amplify-then-synchronize signature). So there are **two memory timescales**: a
+*dynamical* (perturbation) horizon of **~`t_sync` (40–87 steps)** and a *decodable*
+horizon of ~1–2 steps.
 The gap between them is the characterization — the strongly-mixing causal map
 **spreads input history across the lattice (one flip reaches ~32 of 46 sites) into
 a form that no low-degree (≤4) readout can decode beyond lag ~2**, even though the
