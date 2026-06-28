@@ -1254,6 +1254,198 @@ Langton 1990 (*Physica D*); Crutchfield & Feldman 2003 (*Chaos*, "Regenerating
 information"); Lizier, Prokopenko & Zomaya 2008 (local information transfer,
 arXiv 0809.3275); cond-mat/9409080.
 
+## 25. Reservoir computing on the consistent causal map — echo-state property, weak linear memory, no usable reservoir window
+
+§23 found that the causal full-attention map, iterated under a *shared*
+Gumbel-noise realization, is **consistent**: two replicas started from different
+states synchronize. Consistency is exactly the **echo-state property (ESP)** — the
+state becomes a function of the input history with the initial condition washed
+out — which is the defining precondition for *reservoir computing*. This section
+asks the obvious follow-up: granted the ESP, **is the causal LLM-CA a useful
+reservoir?** We drove it with a scalar input stream and measured its computational
+capacity with two calibrated estimators. The answer: it is a *valid* reservoir
+whose capacity is **overwhelmingly instantaneous** — a nonlinear function of the
+*current* input — with only a **weak linear memory of the recent past**. That
+temporal capacity is two to three orders of magnitude below a matched linear
+echo-state network, but it is **not zero**: there is robust lag-1 **linear** memory
+(`MC_1 ≈ 0.10–0.12` at low `T`, basis-independent and seed-robust, clearing its
+floor by a wide margin at both in-domain temperatures). There is **no nonlinear
+temporal computation**: the apparent degree-≥2 temporal capacity is finite-sample
+bias (the degree-stratified floor below rejects it). So the headline is **"weak
+linear lag memory, overwhelmingly instantaneous, no usable reservoir-computing
+window"** — *not* "static / memoryless," but also not a temporal computer. (Two
+overclaims were caught en route, in opposite directions: an earlier draft said "no
+temporal capacity" — an artifact of a ridge-`α` grid railed at its maximum, whose
+fix revealed the linear memory — and a later one claimed an *odd degree-3 nonlinear
+tail*, which a degree-stratified floor then showed to be bias. The surviving claim
+is the linear one.)
+
+**Apparatus** (`llm_life/reservoir.py`, `scripts_reservoir.py`). The lattice is
+`L=48` token sites. A scalar input `u(t) ∈ [-1,1]` is binned to a 16-token
+codebook and **clamped** at the two left-edge "input" sites each step (causal
+attention is leftward, so a left-edge input reaches every reservoir site); the
+remaining 46 sites are the reservoir. A **fixed shared-Gumbel noise** sequence
+(seeded once, replayed identically) makes the driven map a deterministic function
+of `(input, init)` — the §23 coupled-noise machinery reused verbatim. The readout
+projects each reservoir site's token embedding onto the top-`K=8` PCA components
+of the input-embedding matrix (a `K`-dim generalization of the §1 colour table)
+and concatenates → a 368-dim real vector. The clamped input sites are **excluded**
+from the readout.
+
+**Estimators and their gates** (`llm_life/capacity.py`).
+- **Memory Capacity** (Jaeger): `MC_k =` test-`R²` reconstructing `u(t-k)`;
+  `MC = Σ_k MC_k`.
+- **Information Processing Capacity** (Dambre): capacity over an orthonormal basis
+  of the input history — here the **encoded-symbol Gram-Schmidt basis**
+  (orthonormal polynomials of the *binned* input symbol, matched to what the
+  reservoir actually sees), summed and split by **degree** and by **instantaneous**
+  (all delays 0 — a function of the current input) vs **temporal** (any delay ≥ 1
+  — genuine computation over time). Each config is thresholded against a
+  **degree-stratified** shuffled-input floor (a by-chance threshold computed
+  *per degree*, because higher-degree targets have heavier tails and a single
+  global floor under-catches structured high-degree bias).
+- Ridge readout, `α` chosen on a **validation** split, capacity on **held-out
+  test**, over a wide `α` grid (`1e-6 … 1e8`) with an **interiority** assert. The
+  first pass had pinned `α` at the grid maximum for every lag — *under*-regularizing
+  and *under*-counting capacity; widening the grid raised `MC` (e.g. `0.23 → 0.41`
+  at `T=0.3`) and is now interior for every significant-capacity target.
+- The estimators are calibrated on synthetic ground truth (the project's gate
+  discipline). A literal `N`-tap shift register returns `MC=N` and IPC degree-1
+  `=N`, degree ≥ 2 `=0` (**true negative**). A constructed encoded-symbol nonlinear
+  reservoir returns the planted degree-2/3 capacities exactly, total `=` feature
+  count, with the correct degree and inst/temporal split and zero off-target
+  leakage (**true positive**). Determinism: identical `(init,input,noise)` gives
+  byte-identical token grids on MPS, and ESP convergence to *exactly* 0
+  corroborates bit-reproducible logits.
+
+**The ESP holds (the gate).** Driven replicas from fully different random inits,
+under the same input and same fixed noise, converge to **exactly 0** reservoir
+Hamming across the whole swept region `T ∈ [0.3,1.1] × n_in ∈ {1,2,3}`
+(`p_sync = 1.00`; initial divergence 32–41 of 46 sites). Contraction is slower at
+low `T`, so `MC`/`IPC` are well-defined throughout and low `T` is the most
+favourable (least-contractive) operating point.
+
+**Licensed capacity** (causal pythia-160m, `L=48`, `n_in=2`, `K=8`, readout dim
+368, 3 input+noise seeds; mean ± std).
+
+| system | MC | IPC total | IPC **instantaneous** | IPC **temporal** |
+|---|---:|---:|---:|---:|
+| reservoir `T=0.3` (in-domain peak) | 0.41 ± 0.01 | 1.03 | 0.81 | **0.22** |
+| reservoir `T=0.7` | 0.25 ± 0.02 | 0.54 | 0.48 | **0.06** |
+| reservoir `T=1.0` | 0.23 ± 0.03 | 0.36 | 0.34 | **0.02** |
+| reservoir `T=0.0` (out of ESP domain†) | 0.66 ± 0.02 | 2.76 | 2.38 | 0.38 |
+| linear ESN (368-dim, ρ=0.95) | 15.8 ± 0.3 | 55.3 | 1.96 | **53.3** |
+| literal shift register (30-tap) | 29.9 | 9.0 | 1.0 | **8.0** |
+| random-token reservoir | 0.01 | 0.0 | 0.0 | 0.0 |
+
+†`T=0` is the **noiseless argmax** limit, a different regime: the shared-Gumbel
+machinery is degenerate and the ESP was only *verified* for `T ∈ [0.3,1.1]`. It is
+shown for trend only and is **excluded from the headline**, which uses `T=0.3` as
+the in-domain peak.
+
+The contrast is the result. A real reservoir's capacity is **overwhelmingly
+temporal** (the ESN: 53.3 of 55.3, almost all of it degree-3). The causal LLM
+reservoir's capacity is **overwhelmingly instantaneous**: temporal capacity at the
+in-domain peak `T=0.3` is 0.22 (and falls to 0.02 by `T=1`), ~250× below the ESN's.
+What temporal capacity there is decomposes (`T=0.3`, 3 seeds, mean ± std) into
+`MC_1 = 0.099 ± 0.012` (lag-1 *linear* memory) and a small nonlinear remainder; a
+**degree-stratified** shuffled-input floor (a separate by-chance threshold per
+degree, since higher-degree targets have heavier tails and a single global floor
+under-catches structured bias — `scripts_degree_floor.py`) then sorts the
+remainder honestly:
+
+| degree | lag-1 temporal capacity (`T=0.3`) | genuine signal? |
+|---|---:|---|
+| 1 (linear)    | 0.115 ± 0.002 | **yes** — clears its floor by a wide margin at both temps |
+| 2 (quadratic) | 0.031 ± 0.020 | no — seed-unstable (one outlier seed) |
+| 3 (cubic)     | 0.030 ± 0.004 | **no** — floor-height artifact (see below) |
+| 4 (quartic)   | 0.036 ± 0.004 | no — clears at `T=0.3`, **killed at `T=0.7`** (conceded bias) |
+
+The raw temporal profile *rises* with degree (`d2 < d3 < d4`: 0.031, 0.030, 0.036),
+the classic signature of high-degree finite-sample bias — a state with `MC_1 ≈ 0.1`
+cannot legitimately compute degree-4 temporal functions *better* than degree-2. The
+degree-stratified floor correctly kills degree-2 (seed-unstable) and degree-4
+(killed at `T=0.7`). Degree-3 appears to "survive," but that is a **floor-height
+artifact, not signal**: the surviving cubic (`d3 = 0.030`) and the conceded-bias
+quartic (`d4 = 0.036`) are the **same magnitude and equally seed-stable** — d3
+clears only because the degree-3 floor sits *below* 0.030 while the degree-4 floor
+sits *above* 0.036. The fate is set by floor height, not by the reservoir computing
+odd functions. Two further nails: the cubic **fails cross-temperature stability**
+(at `T=0.7` only 1 of 3 seeds clears even the agnostic floor), and the raw profile
+shows **no odd preference** (`d4 > d3`), so the tanh-ESN odd-symmetry analogy does
+not transfer (the LLM-CA has no such mechanism). So we license **no nonlinear
+temporal computation**: the only computation over time is the weak lag-1 *linear*
+memory, dwarfed (~4×) by instantaneous nonlinear capacity. The feature matrix is
+**full rank** (eff-rank 368 = readout dim), so this is not rank starvation — the
+input-controllable subspace is simply small, dominated by the shared-noise
+variance. Lower `T` helps monotonically.
+
+**Input-leak control.** Reading `MC` off **only** the clamped input sites (which
+we exclude) gives `0.78 → 0.30` as `T` rises — **entirely at lag 0**
+(`MC_1 ≈ 0`). So the trivial "read the input off its own site" path carries the
+*current* input but no memory; the weak lag-1 memory the reservoir does have comes
+from genuine propagation into the reservoir sites, not from the clamp. Excluding
+the input sites is the right call (reservoir `MC` 0.66 < leak 0.78 at `T=0`, and
+the reservoir's `MC_1` > 0 while the leak's `MC_1 = 0`).
+
+**Cross-architecture: consistency does not trade off against capacity**
+(`scripts_crossarch.py`, `results/crossarch_capacity.{csv,png}`). Driving the §23
+architecture axis as reservoirs (`T=0.7`, single-seed breadth scan):
+
+| map | ESP (final reservoir Hamming) | temporal IPC |
+|---|---|---:|
+| causal pythia | **holds** (0.00, `p_sync`=1.0) | ≈0 (at noise edge) |
+| local `w=1` distilR | **holds** (0.00, `p_sync`=1.0) | ≈0 |
+| local `w=2` distilR | fails (0.63) | — (undefined) |
+| local `w=4` distilR | fails (1.00) | — (undefined) |
+| global masked distilR | fails (1.00) | — (undefined) |
+
+The two **consistent** maps (causal, local `w=1`) are valid reservoirs with ~0
+temporal capacity (this single-seed scan reads ≈0 at `T=0.7`, where even the causal
+map's weak temporal signal is at the detection edge — consistent with the locked
+3-seed causal value of 0.06 there); the **non-consistent** maps (`w ≥ 2`, global
+masked) are not valid reservoirs at all (ESP fails, damage saturates — §23), so a
+reservoir capacity is **undefined** for them. There is no "edge" in this family
+where a *usable* temporal reservoir lives: the consistency that licenses the
+reservoir is the strong contraction that leaves it only weak memory, and abandoning
+consistency forfeits the echo-state property without buying usable capacity back.
+
+**Conclusion.** The echo-state property is **necessary but not sufficient**. The
+§23 consistency makes the causal LLM-CA a valid reservoir, but the same fast,
+complete contraction leaves it dominated by **instantaneous nonlinear processing**,
+with only a weak lag-1 *linear* memory of the recent past (`MC_1 ≈ 0.10–0.12`, ~4×
+below its instantaneous capacity and ~250× below a matched ESN); there is **no
+nonlinear temporal computation** — the apparent degree-≥2 temporal capacity is
+finite-sample bias that a degree-stratified floor rejects. There is **no usable
+reservoir-computing window** anywhere in the architecture family. So as a reservoir
+the consistent causal LLM-CA is a **dominant instantaneous nonlinear kernel with
+only weak lag-1 linear memory** — consistent, but too contractive to compute over
+time. This reframes §23: consistency is a genuine, measurable dynamical property,
+but on its own it is not the computational power reservoir computing needs.
+
+**Caveats.** (1) One readout family (top-8 embedding-PCA over the token lattice);
+the absolute instantaneous magnitudes would shift under a richer readout, but a
+readout cannot manufacture temporal memory the state does not carry, and the
+*relative* dominance of instantaneous over temporal is the load-bearing claim.
+(2) One small causal model (`pythia-160m`); the cross-arch scan is single-seed
+breadth, not a locked magnitude. (3) IPC caps (degree ≤ 4, delay ≤ 8, ≤ 2
+variables) bound the search; **no** nonlinear-temporal capacity is claimed — a
+**degree-stratified** floor shows the apparent degree-≥2 temporal (including the
+degree-3 cubic) to be finite-sample bias, not computation. (4) Capacity is read where the ESP holds (`T ∈
+[0.3,1.1]`); the `T=0` argmax limit is out of that domain and excluded from the
+headline; under ESP-failure (cross-arch `w ≥ 2`, masked) single-trajectory numbers
+are not reservoir capacities and are reported only to show no hidden temporal
+signal.
+
+**Artifacts.** `llm_life/reservoir.py`, `llm_life/capacity.py`;
+`scripts_reservoir.py` (`apparatus`/`esp`/`mc`/`ipc`), `scripts_capacity_lock.py`
+(licensed 3-seed run + α-interiority check), `scripts_capacity_validate.py`
+(G3/G4 re-license), `scripts_degree_floor.py` (degree-stratified floor),
+`scripts_ipc_control.py`, `scripts_reservoir_robust.py`, `scripts_crossarch.py`.
+Data: `results/reservoir_{esp,mc,ipc}_*`,
+`results/capacity_lock_pythia-160m_L48_nin2_K8.{raw,summary,configs}.csv` + `.png`,
+`results/crossarch_capacity.{csv,png}`.
+
 ## 11. Next steps
 
 1. **Scale the §23 fate map.** Repeat `w×T` and the refined `w=2` boundary at

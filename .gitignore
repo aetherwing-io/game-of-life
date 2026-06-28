@@ -39,5 +39,12 @@ results/*.csv
 !results/glider_filter_localTE.png
 !results/complexity_scaling.png
 !results/complexity_scaling.csv
+# keep the reservoir-computing capacity study artifacts (FINDINGS §25)
+!results/reservoir_*.png
+!results/reservoir_*.csv
+!results/capacity_*.png
+!results/capacity_*.csv
+!results/crossarch_*.png
+!results/crossarch_*.csv
 # keep decoded token grids
 !results/tokens_*.txt
