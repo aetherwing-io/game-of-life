@@ -1268,8 +1268,8 @@ whose capacity is **overwhelmingly instantaneous** — a nonlinear function of t
 *current* input — with only a **weak linear memory of the recent past**. That
 temporal capacity is two to three orders of magnitude below a matched linear
 echo-state network, but it is **not zero**: there is robust lag-1 **linear** memory
-(`MC_1 ≈ 0.10–0.12` at low `T`, basis-independent and seed-robust, clearing its
-floor by a wide margin at both in-domain temperatures). There is **no nonlinear
+(`MC_1 ≈ 0.10` at the in-domain peak `T=0.3`, basis-independent and seed-robust,
+clearing its floor by a wide margin at both in-domain temperatures). There is **no nonlinear
 temporal computation**: the apparent degree-≥2 temporal capacity is finite-sample
 bias (the degree-stratified floor below rejects it). So the headline is **"weak
 linear lag memory, overwhelmingly instantaneous, no usable reservoir-computing
@@ -1328,7 +1328,7 @@ favourable (least-contractive) operating point.
 **Licensed capacity** (causal pythia-160m, `L=48`, `n_in=2`, `K=8`, readout dim
 368, 3 input+noise seeds; mean ± std).
 
-| system | MC | IPC total | IPC **instantaneous** | IPC **temporal** |
+| system | MC | IPC total | IPC **instantaneous** | IPC **temporal**‡ |
 |---|---:|---:|---:|---:|
 | reservoir `T=0.3` (in-domain peak) | 0.41 ± 0.01 | 1.03 | 0.81 | **0.22** |
 | reservoir `T=0.7` | 0.25 ± 0.02 | 0.54 | 0.48 | **0.06** |
@@ -1343,12 +1343,22 @@ machinery is degenerate and the ESP was only *verified* for `T ∈ [0.3,1.1]`. I
 shown for trend only and is **excluded from the headline**, which uses `T=0.3` as
 the in-domain peak.
 
+‡ The reservoir's IPC-temporal is the *measured* total over the degree-agnostic
+floor; the degree-stratified floor (below) licenses only its **linear** part
+(`≈0.115` at `T=0.3`) — the degree-≥2 remainder is finite-sample bias. The headline
+ratios (~460× below ESN, ~7× below instantaneous) use that licensed-linear value.
+
 The contrast is the result. A real reservoir's capacity is **overwhelmingly
 temporal** (the ESN: 53.3 of 55.3, almost all of it degree-3). The causal LLM
-reservoir's capacity is **overwhelmingly instantaneous**: temporal capacity at the
-in-domain peak `T=0.3` is 0.22 (and falls to 0.02 by `T=1`), ~250× below the ESN's.
-What temporal capacity there is decomposes (`T=0.3`, 3 seeds, mean ± std) into
-`MC_1 = 0.099 ± 0.012` (lag-1 *linear* memory) and a small nonlinear remainder; a
+reservoir's capacity is **overwhelmingly instantaneous**: the *measured* temporal
+capacity at the in-domain peak `T=0.3` is 0.22 (pre-degree-floor; falls to 0.02 by
+`T=1`), but the degree-stratified floor below licenses only its **linear** part
+(`≈0.115`) — the degree-≥2 remainder is bias. On that licensed-linear temporal the
+reservoir is **~460× below the ESN** (53.3) and **~7× below its own instantaneous**
+capacity (0.81). What temporal capacity there is decomposes (`T=0.3`, 3 seeds,
+mean ± std) into `MC_1 = 0.099 ± 0.012` (the Jaeger lag-1 *linear* memory; the IPC
+encoded-symbol degree-1 lag-1 in the table below reads `0.115` — the same quantity
+in a slightly different estimator) and a small nonlinear remainder; a
 **degree-stratified** shuffled-input floor (a separate by-chance threshold per
 degree, since higher-degree targets have heavier tails and a single global floor
 under-catches structured bias — `scripts_degree_floor.py`) then sorts the
@@ -1375,18 +1385,19 @@ odd functions. Two further nails: the cubic **fails cross-temperature stability*
 shows **no odd preference** (`d4 > d3`), so the tanh-ESN odd-symmetry analogy does
 not transfer (the LLM-CA has no such mechanism). So we license **no nonlinear
 temporal computation**: the only computation over time is the weak lag-1 *linear*
-memory, dwarfed (~4×) by instantaneous nonlinear capacity. The feature matrix is
+memory, dwarfed (~7×) by instantaneous nonlinear capacity. The feature matrix is
 **full rank** (eff-rank 368 = readout dim), so this is not rank starvation — the
 input-controllable subspace is simply small, dominated by the shared-noise
 variance. Lower `T` helps monotonically.
 
 **Input-leak control.** Reading `MC` off **only** the clamped input sites (which
-we exclude) gives `0.78 → 0.30` as `T` rises — **entirely at lag 0**
-(`MC_1 ≈ 0`). So the trivial "read the input off its own site" path carries the
-*current* input but no memory; the weak lag-1 memory the reservoir does have comes
-from genuine propagation into the reservoir sites, not from the clamp. Excluding
-the input sites is the right call (reservoir `MC` 0.66 < leak 0.78 at `T=0`, and
-the reservoir's `MC_1` > 0 while the leak's `MC_1 = 0`).
+we exclude) gives `≈0.54` at the in-domain `T=0.3` (and falls toward `0.30` by
+`T=1`) — **entirely at lag 0** (`MC_1 ≈ 0`). So the trivial "read the input off its
+own site" path carries the *current* input but no memory; the weak lag-1 memory the
+reservoir does have comes from genuine propagation into the reservoir sites, not
+from the clamp. Excluding the input sites is the right call (reservoir `MC` 0.41 <
+leak 0.54 at the in-domain `T=0.3`, and the reservoir's `MC_1` > 0 while the leak's
+`MC_1 = 0`).
 
 **Cross-architecture: consistency does not trade off against capacity**
 (`scripts_crossarch.py`, `results/crossarch_capacity.{csv,png}`). Driving the §23
@@ -1413,8 +1424,8 @@ consistency forfeits the echo-state property without buying usable capacity back
 **Conclusion.** The echo-state property is **necessary but not sufficient**. The
 §23 consistency makes the causal LLM-CA a valid reservoir, but the same fast,
 complete contraction leaves it dominated by **instantaneous nonlinear processing**,
-with only a weak lag-1 *linear* memory of the recent past (`MC_1 ≈ 0.10–0.12`, ~4×
-below its instantaneous capacity and ~250× below a matched ESN); there is **no
+with only a weak lag-1 *linear* memory of the recent past (`MC_1 ≈ 0.10` in-domain,
+~7× below its instantaneous capacity and ~460× below a matched ESN); there is **no
 nonlinear temporal computation** — the apparent degree-≥2 temporal capacity is
 finite-sample bias that a degree-stratified floor rejects. There is **no usable
 reservoir-computing window** anywhere in the architecture family. So as a reservoir
