@@ -1,0 +1,10 @@
+check,pass,detail
+G3a_shiftreg_MC==N,1,25.000 vs 25
+G3a_alpha_not_at_max,1,0
+G3b_symbolIPC_total==N,1,25.000 vs 25
+G3b_nonlinear_temporal~0,1,0.0000
+G4_total==7,1,7.0000 vs 7
+G4_degree_split_2_4_1,1,d1=2.000 d2=4.000 d3=1.000
+G4_each_config_cap~1,1,min=1.0000
+G4_leakage~0,1,0.0000
+G4_inst==3_temporal==4,1,inst=3.000 temp=4.000
