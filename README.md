@@ -16,15 +16,24 @@ dynamical-systems question:
 The LM is treated as a high-dimensional categorical map `F : V^L → V^L`, not as a
 writer. We strip away semantics and measure the *dynamics*.
 
-> **Results: see [`FINDINGS.md`](FINDINGS.md).** Short version — GPT-2 iterated
-> this way has *no* edge-of-chaos regime under any knob tried: temperature
-> (disorder), a global frequency penalty (balance), or a masked/bidirectional
-> rule (symmetry). It collapses to a dead state or sits in disorder; the causal
-> variant's "chaos" even *synchronizes* under common noise. The missing
-> ingredient is **locality** — full attention mixes the whole lattice every
-> step, so nothing localized can persist. The masked variant came closest
-> (drifting clusters near its transition). Local-neighborhood rules are the
-> next experiment.
+> **Results: see [`FINDINGS.md`](FINDINGS.md).** Short version — iterated this way,
+> the LLM-CA has *no* edge-of-chaos (Class-4) regime under any knob tried (temperature,
+> a global frequency penalty, a masked/bidirectional rule), and that is **invariant to
+> scale and architecture** — confirmed from GPT-2 up to a 12B multimodal model
+> (gemma-4-12B, §22). It collapses to a dead "ground state" or sits in disorder; the
+> missing ingredient is **locality** — full attention mixes the whole lattice every
+> step, so nothing localized persists.
+>
+> The causal variant's "chaos" *synchronizes* under shared noise — which is exactly the
+> **echo-state property** (§23): the state becomes a function of the input history, the
+> precondition for *reservoir computing*. So §25 asks the obvious follow-up — is it a
+> *useful* reservoir? **No, it's a valid but barely-computing one:** a dominant
+> *instantaneous* nonlinear kernel with only a **weak lag-1 linear memory** (~2% of a
+> matched echo-state network), **no nonlinear computation over time**, and **no usable
+> reservoir window** anywhere in the architecture×temperature plane (§26).
+> Mechanistically it doesn't *forget* its input — it **scrambles** it across the lattice
+> into a form no low-degree readout recovers past ~2 steps. The strong contraction that
+> grants consistency is exactly what empties it of usable capacity.
 
 ## The map
 
@@ -192,12 +201,17 @@ python -m llm_life.run --arch mlx --model prism-ml/Ternary-Bonsai-1.7B-mlx-2bit 
 
 ### Experiments worth running with more compute
 
-- **More capable / different-genre base models.** Swap `--model` for a larger
-  base model (`EleutherAI/pythia-1.4b` causal; `roberta-large`, `bert-large`, or
-  a code/BERT-of-code masked model for `--arch masked/local`). Prediction: bigger
-  = sharper = *deeper* attractor basins, so unfamiliar seeds snap back faster,
-  but the transient structure is richer and the "lifeform" tokens shift to that
-  model's training genre.
+- **More capable / different-genre base models.** Swap `--model` for a larger base
+  model (`EleutherAI/pythia-1.4b` causal; `roberta-large`/`bert-large`/a code-BERT for
+  `--arch masked/local`). The "bigger = sharper = *deeper* attractor basins" prediction
+  is **confirmed** at 12B: gemma-4-12B (§22) showed the strongest freeze observed (one
+  forward pass wipes any seed), same dynamical class, only the attractor genre shifting.
+  The genuinely-open follow-up is the **reservoir measurement (§25/§26) at scale** — the
+  apparatus is model-agnostic (one `--model` flag, just heavier compute). Prediction:
+  the memory/no-temporal verdict holds or strengthens (stronger contraction = even less
+  memory), while the *instantaneous* nonlinear kernel may be richer; the cleanest probe
+  is a model with built-in **local** (sliding-window) attention, since locality is the
+  thesis's missing ingredient.
 - **Unfamiliar seeds × capable models.** `--seed-text` with out-of-distribution
   content (a code model seeded with prose, or rare/foreign tokens) probes basin
   depth — how far the model can be pushed before it collapses to its default
@@ -208,14 +222,18 @@ python -m llm_life.run --arch mlx --model prism-ml/Ternary-Bonsai-1.7B-mlx-2bit 
 - **Local frequency penalty** (not yet implemented) — make the balance knob
   neighbourhood-local rather than whole-grid; pair it with `--arch local`.
 
-## A genuinely possible outcome
+## The outcome (and the design philosophy behind it)
 
-GPT-2's geometry may have **no Class-4 band at all** — it might jump straight from
-frozen to static as `T` rises. That is a real, reportable result, not a failure.
-The harness is built to *detect whether* the edge exists (via space-time
-structure, damage curves, and better correlation/MI diagnostics), not to assume
-it does. `τ_int`/`ξ` are reported descriptively, not as edge detectors. The
-absorbing variant is where a true transition, if any, is most likely to appear.
+This harness was built to *detect whether* the edge of chaos exists, not to assume it
+— a negative is a real, reportable result, not a failure. The negative is what we
+found: **no Class-4 band at all**, across every knob and every scale tried (GPT-2 up
+to gemma-4-12B, §22). The geometry jumps from a frozen ground state to static disorder
+as `T` rises, with no edge in between; `τ_int`/`ξ` are reported descriptively, *not* as
+edge detectors (they don't separate Wolfram class — FINDINGS §1/§24; the validated
+discriminator is excess entropy + entropy rate in `complexity.py`). The deeper
+characterization — that the causal map's synchronization *is* an echo-state property,
+but one belonging to a barely-computing reservoir that scrambles rather than stores its
+input — is in **FINDINGS §23–§26**.
 
 ## Layout
 
@@ -227,6 +245,11 @@ llm_life/
   metrics.py       activity, entropy, autocorr time, corr length, Lyapunov
   complexity.py    excess entropy + entropy rate + local transfer entropy — the
                    VALIDATED Class-4 diagnostics (FINDINGS §24); τ_int/ξ are not
+  reservoir.py     driven-reservoir apparatus: codebook drive, shared-noise, PCA
+                   readout (FINDINGS §25). NB: its own MC/IPC are SUPERSEDED —
+                   the canonical estimators live in capacity.py
+  capacity.py      Memory Capacity (Jaeger) + Information Processing Capacity
+                   (Dambre): wide-α, encoded-symbol basis, degree-stratified floor (§25)
   reference_ca.py  elementary CA baselines (known Wolfram classes)
   viz.py           embedding-PCA space-time diagrams + animated GIFs
   run.py           CLI: single / reference / sweep / damage

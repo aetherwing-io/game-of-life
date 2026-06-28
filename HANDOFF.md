@@ -1,7 +1,7 @@
 # HANDOFF — LLM-as-cellular-automaton
 
 Next-session guidance. Read [`FINDINGS.md`](FINDINGS.md) for the full results
-(§1–23) and [`README.md`](README.md) for the harness. This file is the orientation
+(§1–26) and [`README.md`](README.md) for the harness. This file is the orientation
 + what to do next.
 
 ## Bottom line (what we actually know, post-review)
@@ -41,6 +41,19 @@ Iterating LLM inference as a synchronous 1-D cellular automaton:
   "lifeforms" land in the **Class-2** region (standing order); causal is
   chaos/structureless; masked random-init is a saturated fill. Local transfer
   entropy is the new spatially-resolved glider filter.
+- **The consistent causal map is a valid but *barely-computing* reservoir (§25/§26).**
+  The §23 synchronization *is* the echo-state property — the precondition for reservoir
+  computing — so we drove it with a scalar stream and measured its capacity with
+  calibrated estimators (`llm_life/capacity.py`, gate discipline). It has only a weak
+  lag-1 **linear** memory (~2% of a matched echo-state network), is overwhelmingly
+  *instantaneous*, has **no nonlinear computation over time** (degree-≥2 temporal is
+  finite-sample bias — it clears the floor at `T=0.3` but is rejected at the E3 data
+  bar `T_train/P=11` on cross-temperature grounds), and has **no usable reservoir
+  window** anywhere in the (arch × T) plane (§26). It *scrambles* its input across the
+  lattice rather than storing it; the strong contraction that grants consistency is
+  exactly what empties it of capacity. Caveat: the headline `MC` is a *lower bound* —
+  it's still rising at 20× samples-per-feature, so the exact magnitude isn't pinned
+  (the verdict is invariant to it).
 
 ## Calibration — read before quoting any number
 
