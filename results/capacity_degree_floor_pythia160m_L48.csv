@@ -1,0 +1,9 @@
+temp,degree,parity,MC_1,raw_temporal_mean,raw_temporal_std,deg_matched_floor_max,stratified_temporal_mean,stratified_temporal_std,verdict
+0.3,1,linear,0.099,0.119,0.002,0.0075,0.115,0.002,survives
+0.3,2,even,0.099,0.038,0.018,0.0122,0.031,0.020,survives_high_variance
+0.3,3,odd,0.099,0.047,0.003,0.0116,0.030,0.004,clears_floor
+0.3,4,even,0.099,0.062,0.002,0.0153,0.041,0.004,clears_floor_but_inverted_profile
+0.7,1,linear,0.032,0.040,0.006,0.0091,0.036,0.004,survives
+0.7,2,even,0.032,0.023,0.005,0.0122,0.019,0.006,survives
+0.7,3,odd,0.032,0.022,0.008,0.0130,0.010,0.007,marginal_at_floor
+0.7,4,even,0.032,0.020,0.004,0.0159,0.000,0.000,KILLED

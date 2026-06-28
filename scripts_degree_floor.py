@@ -47,6 +47,7 @@ def main():
 
     print(f"[info] in-domain temps {TEMPS}, seeds {[s for s,_ in SEEDS]}, "
           f"degree-stratified floor (max over shuffled-input null per degree), n_surrogate={NSURR}")
+    csv_rows = []
     for temp in TEMPS:
         res.temp = temp
         raw_t = defaultdict(list)        # degree -> [raw temporal cap per seed]
@@ -81,10 +82,37 @@ def main():
         for d in range(1, MAXDEG + 1):
             rt, st = np.array(raw_t[d]), np.array(strat_t[d])
             fl, ag = np.array(thr_t[d]), np.array(agnostic_t[d])
-            verdict = "SURVIVES" if st.mean() > 1e-6 else "killed"
+            # a degree "clears" only if at least one of its configs individually
+            # exceeds the degree-matched floor (stratified sum > 0). Cross-temperature
+            # instability (clears at one T, killed at another) is the high-degree
+            # finite-sample bias signature.
+            verdict = "clears_floor" if st.mean() > 1e-6 else "KILLED"
             tag = "(linear)" if d == 1 else f"(deg-{d} {'odd' if d % 2 else 'even'})"
             print(f"  {d:>3} | {rt.mean():>7.3f}±{rt.std():.3f} | {fl.mean():>14.4f} | "
                   f"{ag.mean():>13.3f} | {st.mean():>7.3f}±{st.std():.3f}  {verdict} {tag}")
+            csv_rows.append({"temp": temp, "degree": d,
+                             "parity": "linear" if d == 1 else ("odd" if d % 2 else "even"),
+                             "MC_1": round(float(np.mean(mc1)), 4),
+                             "raw_temporal_mean": round(float(rt.mean()), 4),
+                             "raw_temporal_std": round(float(rt.std()), 4),
+                             "deg_matched_floor_max": round(float(fl.mean()), 4),
+                             "stratified_temporal_mean": round(float(st.mean()), 4),
+                             "stratified_temporal_std": round(float(st.std()), 4),
+                             "verdict": verdict})
+
+    import csv as _csv, os as _os
+    _os.makedirs("results", exist_ok=True)
+    _p = _os.path.join("results", "capacity_degree_floor_pythia160m_L48.csv")
+    with open(_p, "w", newline="") as _f:
+        _w = _csv.DictWriter(_f, fieldnames=list(csv_rows[0].keys())); _w.writeheader(); _w.writerows(csv_rows)
+    print(f"[wrote] {_p}")
+    # headline decision
+    nl = [r for r in csv_rows if r["degree"] >= 2]
+    unstable = any(r["verdict"] == "KILLED" for r in nl)
+    print("\n[VERDICT] nonlinear temporal " + (
+        "NOT established (a degree is killed by its floor at some T → inverted-profile "
+        "high-degree bias) → §25 = 'weak LINEAR lag memory only'." if unstable else
+        "clears degree-matched floors at all temps → 'weak linear + genuine nonlinear tail'."))
 
 
 if __name__ == "__main__":
