@@ -1,0 +1,4 @@
+check,pass,detail,backend
+G2_replica_token_grids_identical,1,diff_cells=0,mps
+G2_logits_argmax_reproducible,1,max|Δlogit|=0.00e+00,mps
+G2_shared_noise_converges_exact0,1,final_H=0,mps
