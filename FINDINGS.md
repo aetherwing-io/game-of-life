@@ -1396,24 +1396,31 @@ discrepancy worth resolving head-on: initial-condition memory persists ~`t_sync`
 (40–87 steps, the ESP convergence above) yet linear input correlation hits the floor
 by lag ~2. Is the input at lags 2…`t_sync` in the state but encoded *nonlinearly*?
 We measured single-variable capacity of `P_d(u(t-k))` at every lag `k`, per degree,
-against the degree-stratified floor. The answer independently confirms the "no
+against a per-degree shuffled-input floor. The answer independently confirms the "no
 nonlinear temporal" verdict above: at `T=0.3` (3 seeds) linear, quadratic and cubic
-capacity **all decay together**, to their floors by lag ~2 (decodable horizons
-degree-1/2/3 = 2/1/2; at `T=0.7`, 1/1/1) — the nonlinear capacity does **not** reach
-deeper lags than the linear. The map does not "remember its input nonlinearly
-beyond its linear horizon."
+capacity **all decay together to floor by lag ~2**. Crucially this holds even under
+*this test's lenient* per-degree floor (~0.006 — below the §47 degree-stratified
+MAX floor that §25's verdict rests on): **every degree's decodable extent is ≤2
+lags** there, and the stricter §25 floor only shortens them, eliminating the
+degree-≥2 temporal entirely. So the nonlinearity buys **no extra temporal depth**
+beyond the linear ≤2-lag horizon — the map does not "remember its input nonlinearly
+beyond its linear horizon" at any degree (consistent with §25's verdict that the
+degree-≥2 temporal is finite-sample bias).
 
 But a readout-free probe shows the input is not *gone*, only *scrambled*. Flipping a
-single input symbol (same init, same fixed noise) perturbs the reservoir for **~39
-steps** before the trajectories reconverge — first *amplifying* to ~34 of 46 sites
-over ~4 steps, then slowly contracting (the §4 amplify-then-synchronize signature),
-at both `T=0.3` and `T=0.7`. So there are **two memory timescales**: a *dynamical*
-(perturbation) horizon ~39 steps ≈ `t_sync`, and a *decodable* horizon ~1–2 steps.
+single input symbol (same init, same fixed noise) perturbs the reservoir for **≳39
+steps** (the measurement window): one flip reaches ~14 of 46 sites in a *single*
+step (the §10 non-local full-attention spread), amplifies to ~32 by step ~6, then
+slowly contracts but is **still ~5/46 different at step 39** — a *lower bound*, not
+yet re-converged (the §4 amplify-then-synchronize signature), at both `T=0.3` and
+`T=0.7`. So there are **two memory timescales**: a *dynamical* (perturbation)
+horizon **≳39 steps** (≈ `t_sync`, still going at the window edge), and a
+*decodable* horizon ~1–2 steps.
 The gap between them is the characterization — the strongly-mixing causal map
-**entangles input history into a scrambled, high-dimensional state that is present
-for tens of steps but unrecoverable by a degree-≤3 embedding-PCA readout beyond
-lag ~2**. It does
-not forget the input quickly; it *scrambles* it quickly. (Distance check: the weak
+**spreads input history across the lattice (one flip reaches ~32 of 46 sites) into
+a form that no low-degree (≤4) readout can decode beyond lag ~2**, even though the
+perturbation itself lingers for tens of steps. It does not forget the input quickly;
+it *scrambles* it quickly. (Distance check: the weak
 lag-1 decodable memory is *distributed* over the first ~16 reservoir sites next to
 the clamp — `first1 = 0.00`, peaking `first16 ≈ 0.12`, diluting to `first46 ≈ 0.09`
 — local propagation off the clamp, not a single-site copy.) This **locates** the map
