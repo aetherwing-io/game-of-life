@@ -109,6 +109,11 @@ def main():
         u = ru.uniform(-1.0, 1.0, args.steps)
         symbols = rz.bin_input(u, args.n_bins)
         uc = centers[symbols]
+        # MC reconstructs the ENCODED bin index b(t) -- the variable the reservoir
+        # actually receives -- so degree-1 IPC == MC exactly (self-consistency;
+        # verified machine-precision). MC over the encoded bin vs continuous u
+        # differs only ~0.5% (quantization), so headline magnitudes are unchanged.
+        b = symbols.astype(float)
         noises = rz.make_noise(args.steps, L, vocab, dev, ns)
 
         # ---- baselines (driven by the same encoded input uc; once per seed) ----
@@ -123,7 +128,7 @@ def main():
 
         for name, Xb in (("linear_esn", Xez), ("shift_register", Xsrz), ("random_token", Xrz)):
             t0 = time.time()
-            mc = cap.memory_capacity(Xb, u, sp, kmax=args.kmax)
+            mc = cap.memory_capacity(Xb, b, sp, kmax=args.kmax)
             ipc = run_ipc(Xb, symbols, sp, basis, args, seed=us)
             row = {"system": name, "temp": "", "input_seed": us, "noise_seed": ns,
                    "MC": mc["MC"], "MC_0": mc["mc_k"][0], "MC_1": mc["mc_k"][1],
@@ -148,12 +153,12 @@ def main():
             states = res.run(u, init, noises)
             X = res.features(states, table)
             Xz, = rz.standardize(X[sp.train], X)
-            mc = cap.memory_capacity(Xz, u, sp, kmax=args.kmax)
+            mc = cap.memory_capacity(Xz, b, sp, kmax=args.kmax)
             ipc = run_ipc(Xz, symbols, sp, basis, args, seed=us)
             # input-leak control
             Xin = res.features(states, table, sites="input")
             Xinz, = rz.standardize(Xin[sp.train], Xin)
-            mc_leak = cap.memory_capacity(Xinz, u, sp, kmax=args.kmax)
+            mc_leak = cap.memory_capacity(Xinz, b, sp, kmax=args.kmax)
             row = {"system": "reservoir", "temp": temp, "input_seed": us, "noise_seed": ns,
                    "MC": mc["MC"], "MC_0": mc["mc_k"][0], "MC_1": mc["mc_k"][1],
                    "MC_alpha_at_max_signif": mc["alpha_at_max_signif"],

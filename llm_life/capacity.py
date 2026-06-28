@@ -107,7 +107,10 @@ def effective_rank(X: np.ndarray) -> int:
 # --------------------------------------------------------------------------- #
 def memory_capacity(X: np.ndarray, u: np.ndarray, split: Split, kmax: int,
                     alphas=ALPHA_GRID) -> dict:
-    """MC_k = test R² reconstructing the CONTINUOUS input u(t-k); MC = Σ_k MC_k.
+    """MC_k = test R² reconstructing the input variable ``u`` at lag k, ``u(t-k)``;
+    MC = Σ_k MC_k. ``u`` is whatever input variable the caller passes -- pass the
+    ENCODED bin index b(t) (what the reservoir receives) to make degree-1 IPC == MC
+    exactly; passing continuous u differs only ~0.5% (quantization).
     Requires ``washout > kmax`` so every train/val/test row has a valid u(t-k)."""
     assert split.washout > kmax, "washout must exceed kmax so u(t-k) is defined"
     rp = RidgePath(X, split, alphas)

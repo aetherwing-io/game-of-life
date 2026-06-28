@@ -1338,7 +1338,7 @@ favourable (least-contractive) operating point.
 | reservoir `T=1.0` | 0.23 ± 0.03 | 0.36 | 0.34 | **0.02** |
 | reservoir `T=0.0` (out of ESP domain†) | 0.66 ± 0.02 | 2.76 | 2.38 | 0.38 |
 | linear ESN (368-dim, ρ=0.95) | 15.8 ± 0.3 | 55.3 | 1.96 | **53.3** |
-| literal shift register (30-tap) | 29.9 | 9.0 | 1.0 | **8.0** |
+| literal shift register (30-tap) | 30.0 | 9.0 | 1.0 | **8.0** |
 | random-token reservoir | 0.01 | 0.0 | 0.0 | 0.0 |
 
 †`T=0` is the **noiseless argmax** limit, a different regime: the shared-Gumbel
