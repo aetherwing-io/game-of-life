@@ -1343,11 +1343,13 @@ operating point.
 headline `MC` firms slightly *upward* — held-out `R²` is under-estimated at low data
 and rises toward truth, *not* a sign of overfitting — to `0.478 ± 0.017` at `T=0.3`
 and `0.336 ± 0.023` at `T=0.7`, verdict unchanged. A convergence-plateau probe
-(`results/capacity_mc_plateau_*`) finds `MC` still creeping up past the 11× bar —
-the trend is `0.416` (4.9×) → `0.478` (11×) → `0.519` (a partial single-seed 20×
-point), with *shrinking* increments — so `0.478` is a mild **lower bound** on the
-converged value, not a plateau; the verdict is invariant across this whole range
-(~30× below the ESN throughout). Note this `MC` is the *total*
+(`results/capacity_mc_plateau_*`, 3 seeds per level) finds `MC` does **not** plateau
+by 20× data — it keeps rising roughly *steadily*: `0.416` (4.9×) → `0.478` (11×) →
+`0.539 ± 0.015` (20×), with near-constant ≈+0.06 increments, and the memory
+`MC_{k≥1}` likewise (`0.123 → 0.157 → 0.197`). So the `0.478` headline is a **lower
+bound**; the converged magnitude is not pinned by this data range. Only the *order of
+magnitude* — tiny, ~30× below the ESN throughout — is robust, and the verdict is
+invariant across it. Note this `MC` is the *total*
 reconstruction summed over all lags, **dominated by the delay-0 term**
 (`MC_0 ≈ 0.32` at the E3 bar — the reservoir reading the *current* input
 nonlinearly, instantaneous and **not memory**); the genuine **memory** is

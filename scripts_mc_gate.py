@@ -136,6 +136,14 @@ def main():
                   f"MC0={mc0:.3f} MC_k≥1(corr)={mc_kge1_corr:.3f}  rank={hard}(pr={pr:.0f}) "
                   f"ESP_h={esp_h:.1f}({'ok' if esp_ok else 'FAIL'}) leak={leak['MC']:.3f} "
                   f"({time.time()-t0:.0f}s)", flush=True)
+            # Free per-seed device/host memory: longer trajectories (steps≳12k) otherwise
+            # accumulate MPS cache across seeds and the OS SIGKILLs the 2nd seed.
+            del states, X, Xz, Xin, Xinz, noises, u, b
+            import gc as _gc; _gc.collect()
+            try:
+                import torch as _torch; _torch.mps.empty_cache()
+            except Exception:
+                pass
         # aggregate
         a = {"temp": temp, "n_seeds": args.seeds, "ESP_all_ok": int(all(esp_ok_all)),
              "T_train_over_P": round(Tp, 1), "readout_dim": P}
