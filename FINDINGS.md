@@ -1374,9 +1374,13 @@ temporal** (the ESN: 53.3 of 55.3, almost all of it degree-3). The causal LLM
 reservoir's capacity is **overwhelmingly instantaneous**: the *measured* temporal
 capacity at the in-domain peak `T=0.3` is 0.22 (pre-degree-floor; falls to 0.02 by
 `T=1`), but the degree-stratified floor below licenses only its **linear** part
-(`≈0.115`) — the degree-≥2 remainder is bias. On that licensed-linear temporal the
-reservoir is **~460× below the ESN** (53.3) and **~7× below its own instantaneous**
-capacity (0.81). What temporal capacity there is decomposes (`T=0.3`, 3 seeds,
+(`≈0.115` at the lock, firming to `≈0.156` at the E3 bar) — the degree-≥2 remainder
+is finite-sample bias. Note the bias case is *not* "the nonlinear part is small": at
+the E3 bar that remainder grows to `≈0.17`, **numerically comparable to the linear
+term**, yet it is still rejected — by the robustness tests below (cross-temperature
+collapse, seed-noise, indistinguishability from conceded bias, non-decaying profile),
+not by its magnitude. On the licensed-linear temporal the reservoir is **~340× below
+the ESN** (53.3) and **~6× below its own instantaneous** capacity. What temporal capacity there is decomposes (`T=0.3`, 3 seeds,
 mean ± std) into `MC_1 = 0.099 ± 0.012` at the lock (the Jaeger lag-1 *linear*
 memory; the IPC encoded-symbol degree-1 lag-1 is the same quantity in a slightly
 different estimator, `≈0.115`) and a small higher-degree remainder. A
