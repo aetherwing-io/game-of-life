@@ -1271,7 +1271,8 @@ echo-state network, but it is **not zero**: there is robust lag-1 **linear** mem
 (`MC_1 ≈ 0.10` at the in-domain peak `T=0.3`, basis-independent and seed-robust,
 clearing its floor by a wide margin at both in-domain temperatures). There is **no nonlinear
 temporal computation**: the apparent degree-≥2 temporal capacity is finite-sample
-bias (the degree-stratified floor below rejects it). So the headline is **"weak
+bias — it *clears* the degree-stratified floor at the headline `T=0.3` but is
+rejected below on **cross-temperature** + significance grounds. So the headline is **"weak
 linear lag memory, overwhelmingly instantaneous, no usable reservoir-computing
 window"** — *not* "static / memoryless," but also not a temporal computer. (Several
 overclaims were caught en route, in both directions: an early draft said "no
@@ -1373,8 +1374,9 @@ the in-domain peak.
 
 ‡ The reservoir's IPC-temporal is the *measured* total over the degree-agnostic
 floor; the degree-stratified floor (below) licenses only its **linear** part
-(`≈0.115` at `T=0.3`) — the degree-≥2 remainder is finite-sample bias. The headline
-ratios (~460× below ESN, ~7× below instantaneous) use that licensed-linear value.
+(`≈0.115` lock / `≈0.156` at the E3 bar) — the degree-≥2 remainder is finite-sample
+bias. The headline ratios (~340× below ESN, ~6× below instantaneous) use the E3
+licensed-linear value (the lock value gives ~460× / ~7×).
 
 The contrast is the result. A real reservoir's capacity is **overwhelmingly
 temporal** (the ESN: 53.3 of 55.3, almost all of it degree-3). The causal LLM
@@ -1531,8 +1533,9 @@ magnitudes are §25's gated 11× values.)
 (2) One small causal model (`pythia-160m`); the cross-arch scan is single-seed
 breadth, not a locked magnitude. (3) IPC caps (degree ≤ 4, delay ≤ 8, ≤ 2
 variables) bound the search; **no** nonlinear-temporal capacity is claimed — a
-**degree-stratified** floor shows the apparent degree-≥2 temporal (including the
-degree-3 cubic) to be finite-sample bias, not computation. (4) Capacity is read where the ESP holds (`T ∈
+**degree-stratified** floor *plus* a **cross-temperature** stability test show the
+apparent degree-≥2 temporal (including the degree-3 cubic, which clears the floor at
+`T=0.3` but collapses at `T=0.7`) to be finite-sample bias, not computation. (4) Capacity is read where the ESP holds (`T ∈
 [0.3,1.1]`); the `T=0` argmax limit is out of that domain and excluded from the
 headline; under ESP-failure (cross-arch `w ≥ 2`, masked) single-trajectory numbers
 are not reservoir capacities and are reported only to show no hidden temporal
