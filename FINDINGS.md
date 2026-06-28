@@ -1509,15 +1509,18 @@ time. This reframes §23: consistency is a genuine, measurable dynamical propert
 but on its own it is not the computational power reservoir computing needs.
 
 **Caveats.** (1) One readout family at the headline (top-8 embedding-PCA over the
-token lattice), but two robustness sweeps confirm the verdict is not a readout or
-encoding artifact: a **readout-richness** sweep (`#PCA ∈ {2…32}` plus a full-token
-one-hot) shows total `MC` *saturates* at ≈0.47 even with a 1472-dim readout (still
-~33× below the ESN), and richer readouts add only *instantaneous* capacity, never
-temporal — a readout cannot manufacture memory the state does not carry; and an
+token lattice), but two **breadth-level** robustness sweeps confirm the verdict is
+not a readout or encoding artifact: a **readout-richness** sweep (`#PCA ∈ {2…32}`
+plus a full-token one-hot) shows total `MC` *saturates* at a tiny ≈0.47 even with a
+1472-dim readout (still ~33× below the ESN) — and a richer readout cannot manufacture
+temporal memory the state does not carry (it only extracts more of the same fixed
+reservoir state), so the saturation at a small value, not a per-readout temporal
+split (which we did not measure), is what the sweep establishes; and an
 **encoding-size** sweep (codebook `K ∈ {16,24,32}`) shows capacity does *not* climb
-with `K` and the temporal part *shrinks*, so the result is not an artifact of the
+with `K` while its temporal part *shrinks*, so the result is not an artifact of the
 16-token binning. The *relative* dominance of instantaneous over temporal is the
-load-bearing claim and holds across both.
+load-bearing claim. (Both sweeps are at breadth-level data, ~4×; the headline
+magnitudes are §25's gated 11× values.)
 (2) One small causal model (`pythia-160m`); the cross-arch scan is single-seed
 breadth, not a locked magnitude. (3) IPC caps (degree ≤ 4, delay ≤ 8, ≤ 2
 variables) bound the search; **no** nonlinear-temporal capacity is claimed — a
