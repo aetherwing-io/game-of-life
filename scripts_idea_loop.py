@@ -40,6 +40,8 @@ os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 import numpy as np
 import torch
 
+from llm_life.automaton import StepNoise
+from llm_life.sampler import gumbel_like
 from llm_life.run import _build, _gen, _random_init
 
 
@@ -64,12 +66,29 @@ def read_ideas(model, bos_token: int, state: torch.Tensor, layer: int, device: s
     return hs[0, 1:].float().cpu().numpy()  # (L, d): representation at each site
 
 
+def n_layers(model) -> int:
+    return int(getattr(model.config, "num_hidden_layers", None)
+               or model.config.text_config.num_hidden_layers)
+
+
 def default_layer(model) -> int:
     """~1/3 of the way in, where the paper puts workspace onset. hidden_states is
-    length num_layers+1 (index 0 = embeddings), so a layer index in [1, num]."""
-    n = int(getattr(model.config, "num_hidden_layers", None)
-            or model.config.text_config.num_hidden_layers)
-    return max(1, round(n / 3))
+    length num_layers+1 (index 0 = embeddings), so a layer index in [1, num].
+    NB on a shallow model this is arbitrary — prefer the gap-sweep to locate the
+    layer where the *learned* signal (trained - random) is actually largest."""
+    return max(1, round(n_layers(model) / 3))
+
+
+@torch.no_grad()
+def read_ideas_all(model, bos_token: int, state: torch.Tensor, device: str) -> np.ndarray:
+    """All layers at once: (n_layers+1, L, d). One forward pass, every layer —
+    so a layer sweep costs the same as reading a single layer."""
+    L = state.shape[0]
+    inp = torch.empty(1, L + 1, dtype=torch.long, device=device)
+    inp[0, 0] = bos_token
+    inp[0, 1:] = state
+    out = model(inp, output_hidden_states=True)
+    return np.stack([h[0, 1:].float().cpu().numpy() for h in out.hidden_states])
 
 
 # ---------------------------------------------------------------------------
@@ -101,6 +120,61 @@ def project(hidden: np.ndarray, mean: np.ndarray, comps: np.ndarray) -> np.ndarr
     """(L, d) hidden -> (k,) idea-vector for the generation (mean-pooled board)."""
     v = (hidden - mean) @ comps.T   # (L, k)
     return v.mean(axis=0)           # the board contents this generation
+
+
+def _pca(X: np.ndarray, k: int):
+    mean = X.mean(axis=0)
+    _, _, Vt = np.linalg.svd(X - mean, full_matrices=False)
+    return mean.astype(np.float32), Vt[:k].astype(np.float32)
+
+
+def build_basis_all(model, bos, auto, device, *, k=16, n_states=64, length=48,
+                    vocab=50000, seed=0):
+    """PCA basis for EVERY layer from one shared set of forward passes.
+    Returns list indexed by hidden_states layer -> (mean, comps)."""
+    per_layer = None
+    for i in range(n_states):
+        s = _random_init(auto, length, vocab, device, seed + i)
+        allh = read_ideas_all(model, bos, s, device)         # (nL+1, L, d)
+        if per_layer is None:
+            per_layer = [[] for _ in range(allh.shape[0])]
+        for li in range(allh.shape[0]):
+            per_layer[li].append(allh[li])
+    return [_pca(np.concatenate(rows, axis=0), k) for rows in per_layer]
+
+
+def freeze_by_layer(model, bos, auto, bases, traj_states, device) -> np.ndarray:
+    """freeze_score at every layer for a token trajectory. Reads all layers per
+    state once; returns (n_layers+1,)."""
+    ideas = np.stack([read_ideas_all(model, bos, s, device) for s in traj_states])  # (T,nL+1,L,d)
+    out = np.empty(len(bases))
+    for li, (mean, comps) in enumerate(bases):
+        traj = np.stack([project(ideas[t, li], mean, comps) for t in range(ideas.shape[0])])
+        out[li] = freeze_score(traj)
+    return out
+
+
+@torch.no_grad()
+def idea_damage_run(model, bos, auto, layer, mean, comps, device, *,
+                    temp=0.7, length=48, steps=60, seed=3):
+    """S23 lifted to idea-space: two replicas differ by one token at g=0, driven
+    by the IDENTICAL Gumbel field. Track token Hamming AND idea-space distance
+    over time. Coalescence (both -> ~0) is the echo-state property in idea-space."""
+    vocab = int(getattr(model.config, "vocab_size", None) or model.config.text_config.vocab_size)
+    g = _gen(device, seed)
+    a = _random_init(auto, length, vocab, device, seed)
+    b = a.clone()
+    b[seed % length] = int((int(b[seed % length]) + 1) % vocab)
+    A, B = [a], [b]
+    for _ in range(steps):
+        gumbel = gumbel_like(torch.zeros(length, vocab, dtype=torch.float32, device=device), generator=g)
+        a, _ = auto.step(a, temp, False, noise=StepNoise(gumbel=gumbel))
+        b, _ = auto.step(b, temp, False, noise=StepNoise(gumbel=gumbel))
+        A.append(a); B.append(b)
+    hamming = np.array([float((x != y).sum().item()) for x, y in zip(A, B)])
+    ta = np.stack([project(read_ideas(model, bos, s, layer, device), mean, comps) for s in A])
+    tb = np.stack([project(read_ideas(model, bos, s, layer, device), mean, comps) for s in B])
+    return hamming, idea_damage(ta, tb)
 
 
 # ---------------------------------------------------------------------------
@@ -191,15 +265,29 @@ def _planted_pipeline_traj(model, bos, auto, layer, mean, comps, device, *,
 
 def _real_pipeline_traj(model, bos, auto, layer, mean, comps, device, *,
                         temp=0.7, length=48, steps=60, seed=2, absorbing=False):
-    """The trained model's own idea-trajectory (also reused as the random-weight
-    true-negative when `model` is the untrained twin)."""
+    """A model's own idea-trajectory. `model` drives BOTH the dynamics and the
+    read, so the random-weight true-negative exercises the TWIN's own dynamics
+    (not the trained model's) — the fix for the confounded earlier control."""
     vocab = int(getattr(model.config, "vocab_size", None) or model.config.text_config.vocab_size)
     g = _gen(device, seed)
     init = _random_init(auto, length, vocab, device, seed)
-    states, _ = auto.trajectory(init, steps, temp, absorbing, generator=g)
+    orig = auto.model
+    try:
+        auto.model = model
+        states, _ = auto.trajectory(init, steps, temp, absorbing, generator=g)
+    finally:
+        auto.model = orig
     traj = [project(read_ideas(model, bos, states[t], layer, device), mean, comps)
             for t in range(states.shape[0])]
     return np.stack(traj)
+
+
+def token_freeze(states) -> float:
+    """Token-space analogue of freeze_score: mean fraction of sites UNCHANGED per
+    step. The control that matters — if idea-freeze ~= token-freeze, idea-space
+    freezing is merely inherited from the token dynamics, not a new property."""
+    x = states.detach().cpu().numpy()
+    return float((x[1:] == x[:-1]).mean())
 
 
 def _random_weight_twin(model_name: str, device: str):
@@ -277,22 +365,72 @@ def measure(args) -> int:
     auto, tok, model, info = _build(SimpleNamespace(model=args.model, arch="causal", device=args.device))
     device = info["device"]
     bos = auto.bos_token
-    layer = args.layer if args.layer is not None else default_layer(model)
-    mean, comps = build_basis(model, bos, auto, layer, device, k=args.k, length=args.length)
+    vocab = int(getattr(model.config, "vocab_size", None) or model.config.text_config.vocab_size)
+    nL = n_layers(model)
 
-    traj = _real_pipeline_traj(model, bos, auto, layer, mean, comps, device,
-                               temp=args.temp, length=args.length, steps=args.steps)
-    label = classify(traj, THRESHOLDS)
-    print(f"\nMEASURE  model={info['model']}  layer={layer}  T={args.temp}  steps={args.steps}")
-    print(f"  freeze={freeze_score(traj):.3f}  period={period2_score(traj):.3f} "
-          f"  wander={wander_score(traj):.3f}")
-    print(f"  idea-trajectory class: {label}")
+    # --- token trajectory (the same object the token-lattice study iterates) ---
+    g = _gen(device, seed=2)
+    init = _random_init(auto, args.length, vocab, device, seed=2)
+    traj_states, _ = auto.trajectory(init, args.steps, args.temp, False, generator=g)
+
+    # --- LEARNED-GAP LAYER SWEEP: freeze(trained) - freeze(random twin), per layer.
+    #     The headline metric. Absolute freeze is confounded by trivial contraction
+    #     (see the random-weight control); the gap is the learned part.
+    bases = build_basis_all(model, bos, auto, device, k=args.k, length=args.length, vocab=vocab)
+    fr_trained = freeze_by_layer(model, bos, auto, bases, traj_states, device)
+
+    twin = _random_weight_twin(info["model"], device)
+    tbases = build_basis_all(twin, bos, auto, device, k=args.k, length=args.length, vocab=vocab)
+    tinit = _random_init(auto, args.length, vocab, device, seed=2)
+    ttraj, _ = _twin_trajectory(twin, auto, tinit, args.steps, args.temp, device, seed=2)
+    fr_random = freeze_by_layer(twin, bos, auto, tbases, ttraj, device)
+
+    tok_fr = token_freeze(traj_states)   # one scalar: how frozen the WORDS are
+    gap = fr_trained - fr_random
+    excess = fr_trained - tok_fr         # idea settles MORE than words? (the honest signal)
+    print(f"\nMEASURE  model={info['model']}  T={args.temp}  steps={args.steps}  k={args.k}")
+    print(f"  token-space freeze (baseline, all layers share it): {tok_fr:.3f}")
+    print(f"  layer sweep  [gap = trained-random (learned); excess = idea_freeze - token_freeze]:")
+    print(f"  {'layer':>5s} {'depth':>6s} {'trained':>8s} {'random':>7s} {'gap':>7s} {'excess':>7s}")
+    for li in range(1, len(bases)):  # skip 0 (embeddings)
+        mark = "  <- 1/3" if li == round(nL/3) else ("  <- 2/3" if li == round(2*nL/3) else "")
+        print(f"  {li:5d} {li/nL:6.2f} {fr_trained[li]:8.3f} {fr_random[li]:7.3f} "
+              f"{gap[li]:7.3f} {excess[li]:7.3f}{mark}")
+    best = int(1 + np.argmax(gap[1:]))
+    print(f"  peak learned gap at layer {best}/{nL} (depth {best/nL:.2f}): gap={gap[best]:.3f}, "
+          f"excess-over-tokens={excess[best]:+.3f}")
+
+    # --- idea-space damage spreading at the chosen layer (S23 lifted) ----------
+    layer = args.layer if args.layer is not None else best
+    mean, comps = bases[layer]
+    ham, idmg = idea_damage_run(model, bos, auto, layer, mean, comps, device,
+                                temp=args.temp, length=args.length, steps=args.steps)
+    traj = np.stack([project(read_ideas_all(model, bos, s, device)[layer], mean, comps)
+                     for s in traj_states])
+    heal_tok = "coalesces" if ham[-1] < 1 else "persists"
+    heal_idea = "coalesces" if idmg[-1] < 0.05 else "persists"
+    print(f"\n  idea-space @ layer {layer}/{nL} (depth {layer/nL:.2f}):")
+    print(f"    trajectory: freeze={freeze_score(traj):.3f} period={period2_score(traj):.3f} "
+          f"wander={wander_score(traj):.3f} -> {classify(traj, THRESHOLDS)}")
+    print(f"    damage token-Hamming: peak={ham.max():.0f}/{args.length} final={ham[-1]:.0f} -> {heal_tok}")
+    print(f"    damage idea-space:    peak={idmg.max():.3f} final={idmg[-1]:.3f} -> {heal_idea}")
     print("  (trust this ONLY if `calibrate` printed GREEN for this model.)")
-    # TODO next: idea-space damage spreading (two runs, one-token diff, shared
-    # Gumbel noise, idea_damage over time -> S23 echo-state test in idea-space);
-    # then Option B -- activation-steering closed loop; then the complexity plane
-    # on the discretized idea-trajectory.
+    # TODO next: Option B -- activation-steering closed loop (feed the idea back,
+    # not just observe it); then the complexity plane on the discretized idea
+    # trajectory; multi-seed error bars before any of this is a finding.
     return 0
+
+
+@torch.no_grad()
+def _twin_trajectory(twin, auto, init, steps, temp, device, seed):
+    """Iterate the random-weight twin under the same map (its own logits)."""
+    orig = auto.model
+    try:
+        auto.model = twin
+        g = _gen(device, seed)
+        return auto.trajectory(init, steps, temp, False, generator=g)
+    finally:
+        auto.model = orig
 
 
 # ---------------------------------------------------------------------------
