@@ -122,6 +122,20 @@ def project(hidden: np.ndarray, mean: np.ndarray, comps: np.ndarray) -> np.ndarr
     return v.mean(axis=0)           # the board contents this generation
 
 
+def project_persite(hidden: np.ndarray, mean: np.ndarray, comps: np.ndarray) -> np.ndarray:
+    """(L, d) -> (L, k): keep every site separate (NO pooling). The control."""
+    return (hidden - mean) @ comps.T
+
+
+def persite_freeze(traj_hidden, mean, comps) -> float:
+    """freeze computed PER SITE then averaged — never mixing sites. If this is
+    high too, the pooled stability is real; if it collapses, pooled freeze was a
+    central-limit averaging artifact."""
+    V = np.stack([project_persite(h, mean, comps) for h in traj_hidden])  # (T,L,k)
+    u = V / (np.linalg.norm(V, axis=-1, keepdims=True) + 1e-8)
+    return float((u[1:] * u[:-1]).sum(axis=-1).mean())
+
+
 def _pca(X: np.ndarray, k: int):
     mean = X.mean(axis=0)
     _, _, Vt = np.linalg.svd(X - mean, full_matrices=False)
@@ -282,6 +296,32 @@ def _real_pipeline_traj(model, bos, auto, layer, mean, comps, device, *,
     return np.stack(traj)
 
 
+@torch.no_grad()
+def logit_lens_tokens(model, tok, state, layer, device, topn=10):
+    """"See" the ideas: push the layer-`layer` hidden state through the model's
+    final norm + unembedding (the logit lens) and return the most common top-1
+    tokens across sites. Approximate for a mid layer, but it turns the idea-space
+    from numbers into words — what the representation is 'about to say'."""
+    # locate final norm + unembedding generically (GPTNeoX / GPT2 / Llama-ish)
+    base = getattr(model, "gpt_neox", None) or getattr(model, "transformer", None) \
+        or getattr(model, "model", None)
+    final_norm = (getattr(base, "final_layer_norm", None) or getattr(base, "ln_f", None)
+                  or getattr(base, "norm", None)) if base is not None else None
+    unembed = (getattr(model, "embed_out", None) or getattr(model, "lm_head", None))
+    if final_norm is None or unembed is None:
+        return None
+    L = state.shape[0]
+    inp = torch.empty(1, L + 1, dtype=torch.long, device=device)
+    inp[0, 0] = model.config.bos_token_id or 0
+    inp[0, 1:] = state
+    hs = model(inp, output_hidden_states=True).hidden_states[layer][0, 1:]  # (L,d)
+    logits = unembed(final_norm(hs))                                        # (L,V)
+    top = logits.argmax(dim=-1).tolist()
+    from collections import Counter
+    common = Counter(tok.decode([t]) for t in top).most_common(topn)
+    return common
+
+
 def token_freeze(states) -> float:
     """Token-space analogue of freeze_score: mean fraction of sites UNCHANGED per
     step. The control that matters — if idea-freeze ~= token-freeze, idea-space
@@ -379,41 +419,62 @@ def measure(args) -> int:
     bases = build_basis_all(model, bos, auto, device, k=args.k, length=args.length, vocab=vocab)
     fr_trained = freeze_by_layer(model, bos, auto, bases, traj_states, device)
 
-    twin = _random_weight_twin(info["model"], device)
-    tbases = build_basis_all(twin, bos, auto, device, k=args.k, length=args.length, vocab=vocab)
-    tinit = _random_init(auto, args.length, vocab, device, seed=2)
-    ttraj, _ = _twin_trajectory(twin, auto, tinit, args.steps, args.temp, device, seed=2)
-    fr_random = freeze_by_layer(twin, bos, auto, tbases, ttraj, device)
+    if args.twin:
+        twin = _random_weight_twin(info["model"], device)
+        tbases = build_basis_all(twin, bos, auto, device, k=args.k, length=args.length, vocab=vocab)
+        tinit = _random_init(auto, args.length, vocab, device, seed=2)
+        ttraj, _ = _twin_trajectory(twin, auto, tinit, args.steps, args.temp, device, seed=2)
+        fr_random = freeze_by_layer(twin, bos, auto, tbases, ttraj, device)
+    else:
+        fr_random = np.full(len(bases), np.nan)  # skipped for speed; see --twin
 
     tok_fr = token_freeze(traj_states)   # one scalar: how frozen the WORDS are
-    gap = fr_trained - fr_random
     excess = fr_trained - tok_fr         # idea settles MORE than words? (the honest signal)
     print(f"\nMEASURE  model={info['model']}  T={args.temp}  steps={args.steps}  k={args.k}")
     print(f"  token-space freeze (baseline, all layers share it): {tok_fr:.3f}")
-    print(f"  layer sweep  [gap = trained-random (learned); excess = idea_freeze - token_freeze]:")
-    print(f"  {'layer':>5s} {'depth':>6s} {'trained':>8s} {'random':>7s} {'gap':>7s} {'excess':>7s}")
+    print(f"  layer sweep  [excess = idea_freeze - token_freeze; POOLED read]:")
+    print(f"  {'layer':>5s} {'depth':>6s} {'trained':>8s} {'random':>7s} {'excess':>7s}")
     for li in range(1, len(bases)):  # skip 0 (embeddings)
         mark = "  <- 1/3" if li == round(nL/3) else ("  <- 2/3" if li == round(2*nL/3) else "")
-        print(f"  {li:5d} {li/nL:6.2f} {fr_trained[li]:8.3f} {fr_random[li]:7.3f} "
-              f"{gap[li]:7.3f} {excess[li]:7.3f}{mark}")
-    best = int(1 + np.argmax(gap[1:]))
-    print(f"  peak learned gap at layer {best}/{nL} (depth {best/nL:.2f}): gap={gap[best]:.3f}, "
-          f"excess-over-tokens={excess[best]:+.3f}")
+        rnd = "  nan" if np.isnan(fr_random[li]) else f"{fr_random[li]:7.3f}"
+        print(f"  {li:5d} {li/nL:6.2f} {fr_trained[li]:8.3f} {rnd} {excess[li]:7.3f}{mark}")
+    best = int(1 + np.argmax(excess[1:]))
+    print(f"  peak excess-over-tokens at layer {best}/{nL} (depth {best/nL:.2f}): {excess[best]:+.3f}")
 
-    # --- idea-space damage spreading at the chosen layer (S23 lifted) ----------
+    # --- POOLING CONTROL + damage + decode at the chosen layer -----------------
     layer = args.layer if args.layer is not None else best
     mean, comps = bases[layer]
+    lyr_hidden = [read_ideas(model, bos, s, layer, device) for s in traj_states]  # per-gen (L,d)
+    traj = np.stack([project(h, mean, comps) for h in lyr_hidden])                # pooled
+    pooled_fr = freeze_score(traj)
+    persite_fr = persite_freeze(lyr_hidden, mean, comps)                          # THE control
     ham, idmg = idea_damage_run(model, bos, auto, layer, mean, comps, device,
                                 temp=args.temp, length=args.length, steps=args.steps)
-    traj = np.stack([project(read_ideas_all(model, bos, s, device)[layer], mean, comps)
-                     for s in traj_states])
     heal_tok = "coalesces" if ham[-1] < 1 else "persists"
     heal_idea = "coalesces" if idmg[-1] < 0.05 else "persists"
     print(f"\n  idea-space @ layer {layer}/{nL} (depth {layer/nL:.2f}):")
-    print(f"    trajectory: freeze={freeze_score(traj):.3f} period={period2_score(traj):.3f} "
-          f"wander={wander_score(traj):.3f} -> {classify(traj, THRESHOLDS)}")
+    real_excess = persite_fr - tok_fr        # the meaningful quantity: un-pooled vs words
+    inflation = pooled_fr - persite_fr        # how much pooling exaggerated it
+    print(f"    POOLING CONTROL  pooled={pooled_fr:.3f}  per-site={persite_fr:.3f}"
+          f"  token={tok_fr:.3f}")
+    print(f"      pooling inflation (pooled - per-site) = {inflation:+.3f}")
+    print(f"      REAL dissociation (per-site - token)  = {real_excess:+.3f}")
+    if real_excess > 0.2:
+        print(f"      -> per-site idea freeze >> token freeze: the representation is "
+              f"stabler than the words. Dissociation SURVIVES pooling (smaller than pooled).")
+    else:
+        print(f"      -> per-site idea freeze ~ token freeze: no real dissociation; pooled "
+              f"result was an averaging artifact.")
+    print(f"    trajectory: period={period2_score(traj):.3f} wander={wander_score(traj):.3f} "
+          f"-> {classify(traj, THRESHOLDS)}")
     print(f"    damage token-Hamming: peak={ham.max():.0f}/{args.length} final={ham[-1]:.0f} -> {heal_tok}")
     print(f"    damage idea-space:    peak={idmg.max():.3f} final={idmg[-1]:.3f} -> {heal_idea}")
+
+    # --- "see the ideas": logit-lens decode of the settled representation ------
+    dec = logit_lens_tokens(model, tok, traj_states[-1], layer, device)
+    if dec is not None:
+        words = "  ".join(f"{w!r}x{c}" for w, c in dec)
+        print(f"    idea decode (logit-lens @ layer {layer}, final gen): {words}")
     print("  (trust this ONLY if `calibrate` printed GREEN for this model.)")
     # TODO next: Option B -- activation-steering closed loop (feed the idea back,
     # not just observe it); then the complexity plane on the discretized idea
@@ -447,6 +508,8 @@ def main():
         sp.add_argument("--length", type=int, default=48)
         sp.add_argument("--steps", type=int, default=60)
         sp.add_argument("--temp", type=float, default=0.7)
+        sp.add_argument("--twin", action="store_true",
+                        help="also run the random-weight gap sweep (slow; gap is deprecated)")
     args = p.parse_args()
     fn = {"calibrate": calibrate, "measure": measure}[args.cmd]
     sys.exit(fn(args))
