@@ -35,6 +35,40 @@ coordinates wrap via `and 7`, so the board is a torus), copy it back, repeat
 16 times, then `exit(0)`. It talks to the kernel only through raw `syscall`
 instructions — no libc, no sections, no symbols, no relocations.
 
+## The verification experiment
+
+If models are ever to emit binaries directly, the interesting question is not
+fluency but error detection — so this directory also tests the "probabilistic
+generator + small deterministic checker" architecture on itself:
+
+- **`claims.json`** — the instruction ledger the generator produced while
+  hand-assembling: every instruction's offset and bytes, and every jump's
+  intended target. Proof-carrying code in miniature.
+- **`verify.py check life`** — a deliberately dumb checker (byte comparison and
+  arithmetic only, no x86 knowledge) that validates the ledger's internal
+  consistency, the jump displacements, the ELF header invariants, and the data
+  landmarks.
+- **`verify.py oracle life`** — differential test against an independent Life
+  implementation (different data representation, same rules).
+- **`verify.py mutate life`** — flips each of the 249 code bytes in turn and
+  classifies how the corrupted binary fails.
+
+Results on this binary:
+
+1. Both checks PASS on the good binary.
+2. Reconstructing the original 2-byte padding bug: the buggy binary **exits 0**
+   — but `check` flags the exact cause (`p_filesz` 0x2C9 vs actual 0x2C7, board
+   seed shifted) and `oracle` flags the symptom (wrong output from line 1).
+3. Mutation sweep over all 249 code bytes: **72% crash, 8% hang, 19% run to
+   completion with exit 0 and wrong output, 1% are neutral.** Exit code alone
+   misses one in five corruptions; the output oracle catches every non-neutral
+   one.
+
+That 19% is the empirical version of the claim above: machine code has no
+redundancy to make errors loud, so a generator at this level *needs* an
+independent verifier — and a ~200-line deterministic one is enough to catch
+both the real bug from this binary's development and every silent mutant.
+
 ## Honest caveats
 
 This demonstrates the capability, not the practice. Hand-emitted machine code
