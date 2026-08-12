@@ -1,0 +1,229 @@
+# ============================================================================
+# life2.hex — second hand-written x86-64 Linux ELF, harder than life.hex:
+#   * 16x16 torus running an R-pentomino (chaotic, unlike the glider)
+#   * ANSI clear-screen animation (escape prefix baked into the out buffer)
+#   * nanosleep(60ms) between frames (timespec struct at a hand-chosen address)
+#   * argv parsing: `./life2 N` runs N generations (hand-rolled atoi reading
+#     argc/argv straight off the entry-point stack); default/invalid -> 64
+# Still no compiler, assembler, or linker. Built the same way:
+#   sed 's/#.*//' life2.hex | tr -d ' \n' | \
+#     python3 -c "import sys; sys.stdout.buffer.write(bytes.fromhex(sys.stdin.read()))" > life2
+#
+# Memory map (one RWX PT_LOAD at 0x400000, file mapped from offset 0):
+#   0x400078  code (entry)                    0x400400  outbuf (280 bytes:
+#   0x400200  board (256 bytes)                         7-byte ANSI prefix +
+#   0x400300  next  (256 bytes)                         16x17 chars + blank)
+#                                             0x400518  timespec {0, 60ms}
+# ============================================================================
+
+# ---------------------------------------------------------------- ELF header
+7F 45 4C 46 02 01 01 00 00 00 00 00 00 00 00 00   # magic, 64-bit LE SysV
+02 00 3E 00 01 00 00 00                           # ET_EXEC, EM_X86_64, v1
+78 00 40 00 00 00 00 00                           # e_entry = 0x400078
+40 00 00 00 00 00 00 00                           # e_phoff
+00 00 00 00 00 00 00 00                           # e_shoff = 0
+00 00 00 00 40 00 38 00 01 00 00 00 00 00 00 00   # flags, sizes, phnum=1
+
+# ------------------------------------------------------------ program header
+01 00 00 00 07 00 00 00                           # PT_LOAD, RWX
+00 00 00 00 00 00 00 00                           # p_offset = 0
+00 00 40 00 00 00 00 00 00 00 40 00 00 00 00 00   # p_vaddr/p_paddr
+28 05 00 00 00 00 00 00 28 05 00 00 00 00 00 00   # p_filesz/p_memsz = 0x528
+00 10 00 00 00 00 00 00                           # p_align
+
+# ------------------------------------------------- code, file offset 0x78
+# r8=board r9=next r10=outbuf r15=generations; SysV entry: [rsp]=argc,
+# [rsp+16]=argv[1]
+#
+# _start:                                          (code offset 0)
+49 C7 C7 40 00 00 00                   # mov r15, 64          ; default gens
+48 8B 04 24                            # mov rax, [rsp]       ; argc
+48 83 F8 02                            # cmp rax, 2
+7C 24                                  # jl gens_done (+36)
+48 8B 74 24 10                         # mov rsi, [rsp+16]    ; argv[1]
+31 C9                                  # xor ecx, ecx         ; atoi acc
+# atoi_loop:                                       (offset 24)
+0F B6 06                               # movzx eax, byte [rsi]
+2C 30                                  # sub al, '0'
+3C 09                                  # cmp al, 9
+77 0C                                  # ja atoi_done (+12)   ; non-digit ends
+48 6B C9 0A                            # imul rcx, rcx, 10
+48 01 C1                               # add rcx, rax
+48 FF C6                               # inc rsi
+EB EB                                  # jmp atoi_loop (-21)
+# atoi_done:                                       (offset 45)
+48 85 C9                               # test rcx, rcx
+74 03                                  # jz gens_done (+3)    ; "abc"/0 -> 64
+49 89 CF                               # mov r15, rcx
+# gens_done:                                       (offset 53)
+49 B8 00 02 40 00 00 00 00 00          # mov r8,  0x400200    ; board
+49 B9 00 03 40 00 00 00 00 00          # mov r9,  0x400300    ; next
+49 BA 00 04 40 00 00 00 00 00          # mov r10, 0x400400    ; outbuf
+
+# gen_loop:                                        (offset 83)
+# -- render after the baked-in 7-byte ANSI clear+home prefix --
+4D 8D 5A 07                            # lea r11, [r10+7]
+31 C9                                  # xor ecx, ecx
+# render_loop:                                     (offset 89)
+B0 2E                                  # mov al, '.'
+41 80 3C 08 00                         # cmp byte [r8+rcx], 0
+74 02                                  # je +2
+B0 23                                  # mov al, '#'
+41 88 03                               # mov [r11], al
+49 FF C3                               # inc r11
+89 C8                                  # mov eax, ecx
+83 E0 0F                               # and eax, 15
+83 F8 0F                               # cmp eax, 15
+75 07                                  # jne +7
+41 C6 03 0A                            # mov byte [r11], '\n'
+49 FF C3                               # inc r11
+FF C1                                  # inc ecx
+81 F9 00 01 00 00                      # cmp ecx, 256
+75 D4                                  # jne render_loop (-44)
+41 C6 03 0A                            # mov byte [r11], '\n' ; blank line
+# -- write(1, outbuf, 280) --
+B8 01 00 00 00                         # mov eax, 1
+BF 01 00 00 00                         # mov edi, 1
+4C 89 D6                               # mov rsi, r10
+BA 18 01 00 00                         # mov edx, 280
+0F 05                                  # syscall
+# -- nanosleep(&ts, NULL) --
+B8 23 00 00 00                         # mov eax, 35
+48 BF 18 05 40 00 00 00 00 00          # mov rdi, 0x400518
+31 F6                                  # xor esi, esi
+0F 05                                  # syscall
+
+# -- next generation, 16x16 torus (wrap with AND 15) --
+31 C9                                  # xor ecx, ecx         ; y
+# y_loop:                                          (offset 178)
+31 D2                                  # xor edx, edx         ; x
+# x_loop:                                          (offset 180)
+31 DB                                  # xor ebx, ebx         ; count
+BE FF FF FF FF                         # mov esi, -1          ; dy
+# dy_loop:                                         (offset 187)
+BF FF FF FF FF                         # mov edi, -1          ; dx
+# dx_loop:                                         (offset 192)
+89 F0                                  # mov eax, esi
+09 F8                                  # or  eax, edi
+74 15                                  # jz skip_self (+21)
+8D 04 31                               # lea eax, [rcx+rsi]
+83 E0 0F                               # and eax, 15
+C1 E0 04                               # shl eax, 4
+8D 2C 3A                               # lea ebp, [rdx+rdi]
+83 E5 0F                               # and ebp, 15
+01 E8                                  # add eax, ebp
+41 02 1C 00                            # add bl, [r8+rax]
+# skip_self:                                       (offset 219)
+FF C7                                  # inc edi
+83 FF 02                               # cmp edi, 2
+75 DE                                  # jne dx_loop (-34)
+FF C6                                  # inc esi
+83 FE 02                               # cmp esi, 2
+75 D2                                  # jne dy_loop (-46)
+89 C8                                  # mov eax, ecx
+C1 E0 04                               # shl eax, 4
+01 D0                                  # add eax, edx         ; idx = y*16+x
+45 8A 24 00                            # mov r12b, [r8+rax]
+45 31 ED                               # xor r13d, r13d
+80 FB 03                               # cmp bl, 3
+74 0A                                  # je set_alive (+10)
+80 FB 02                               # cmp bl, 2
+75 08                                  # jne store (+8)
+45 84 E4                               # test r12b, r12b
+74 03                                  # jz store (+3)
+# set_alive:                                       (offset 262)
+41 B5 01                               # mov r13b, 1
+# store:                                           (offset 265)
+45 88 2C 01                            # mov [r9+rax], r13b
+FF C2                                  # inc edx
+83 FA 10                               # cmp edx, 16
+75 A0                                  # jne x_loop (-96)
+FF C1                                  # inc ecx
+83 F9 10                               # cmp ecx, 16
+75 97                                  # jne y_loop (-105)
+# -- copy next -> board --
+31 C9                                  # xor ecx, ecx
+# copy_loop:                                       (offset 285)
+41 8A 04 09                            # mov al, [r9+rcx]
+41 88 04 08                            # mov [r8+rcx], al
+FF C1                                  # inc ecx
+81 F9 00 01 00 00                      # cmp ecx, 256
+75 EE                                  # jne copy_loop (-18)
+49 FF CF                               # dec r15
+0F 85 1B FF FF FF                      # jnz gen_loop (-229)
+# -- exit(0) --
+B8 3C 00 00 00                         # mov eax, 60
+31 FF                                  # xor edi, edi
+0F 05                                  # syscall
+# code ends at offset 321 (file 0x1B9)
+
+# ---------------------------------------- padding to 0x200 (71 x 00)
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00
+
+# ------------------- board @ 0x400200: R-pentomino at (7,7)  .##
+#                                                             ##.
+#                                                             .#.
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   # row 0
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   # row 1
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   # row 2
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   # row 3
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   # row 4
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   # row 5
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   # row 6
+00 00 00 00 00 00 00 00 01 01 00 00 00 00 00 00   # row 7:  cols 8,9
+00 00 00 00 00 00 00 01 01 00 00 00 00 00 00 00   # row 8:  cols 7,8
+00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00   # row 9:  col 8
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   # row 10
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   # row 11
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   # row 12
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   # row 13
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   # row 14
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   # row 15
+
+# ------------------- next @ 0x400300: 256 bytes scratch
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+# ------------------- outbuf @ 0x400400: "\x1b[2J\x1b[H" + 273 zero bytes
+1B 5B 32 4A 1B 5B 48
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00
+
+# ------------------- timespec @ 0x400518: {tv_sec=0, tv_nsec=60000000}
+00 00 00 00 00 00 00 00
+00 87 93 03 00 00 00 00
+# file ends at offset 0x528 (1320 bytes)

@@ -69,6 +69,42 @@ redundancy to make errors loud, so a generator at this level *needs* an
 independent verifier — and a ~200-line deterministic one is enough to catch
 both the real bug from this binary's development and every silent mutant.
 
+## Round two: life2, and the token economics
+
+`life2.hex` raises the difficulty: 16×16 torus, an R-pentomino (chaotic
+evolution), ANSI clear-screen animation, a 60 ms `nanosleep` between frames,
+and argv parsing (`./life2 N` runs N generations) — meaning stack access at
+the entry point and a hand-rolled `atoi`, ~100 instructions and 21 hand-computed
+jump displacements. This time the ledger (`claims2.json`) and checker
+(`verify2.py`) were written *before* first execution, and the binary passed
+the structural check and all five oracle cases (default, numeric, and invalid
+argv) on the first build.
+
+`life2.c` is the behavior-identical C program (verified against the same
+oracle) for comparing costs:
+
+| artifact                          | chars  | ~output tokens |
+|-----------------------------------|--------|----------------|
+| `life2.c` (traditional pipeline)  | 1,511  | ~380           |
+| raw binary payload (1,320 bytes)  | —      | ~1,320         |
+| `life2.hex` as actually emitted   | 12,391 | ~2,610         |
+| `claims2.json` ledger             | 4,768  | ~1,190         |
+
+(Token counts are estimates: ~1 token per space-separated hex byte, ~4 chars
+per token for source. )
+
+So direct emission cost ~3.5× the C version in pure payload tokens, ~7× as
+emitted with annotations, ~10× with the verification ledger — before counting
+the much larger *reasoning* overhead of offset bookkeeping, which the C
+version simply doesn't have. The edit asymmetry is worse than the emission
+asymmetry: inserting one instruction mid-program shifts every later offset and
+invalidates every displacement across the gap — an O(program) re-emission —
+where a C edit is local.
+
+The one economic win for direct emission: the deliverable. The hand-written
+binary is 1,320 bytes; `gcc -O2` produces 16 KB dynamic / 785 KB static for
+identical behavior.
+
 ## Honest caveats
 
 This demonstrates the capability, not the practice. Hand-emitted machine code
